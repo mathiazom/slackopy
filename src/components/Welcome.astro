@@ -1,15 +1,22 @@
 ---
-import favicon from '../../public/favicon.svg';
 import background from '../assets/background.svg';
+
+const backendUrl = import.meta.env.BACKEND_URL;
+
+const response = await fetch(`${backendUrl}/channels`);
+const data = await response.json();
+const channels = data.channels as {id: string, name: string}[];
 ---
 
 <div id="container">
 	<img id="background" src={background.src} alt="" fetchpriority="high" />
 	<main>
 		<section id="hero">
-			<a href="https://astro.build"
-				><img src={favicon.src} width="200" height="200" alt="slackopy" /></a
-			>
+			<ul id="channels">
+				{channels.map((channel) => (
+					<li>{channel.name}</li>
+				))}
+			</ul>
 		</section>
 	</main>
 </div>
@@ -40,6 +47,24 @@ import background from '../assets/background.svg';
 		align-items: start;
 		flex-direction: column;
 		justify-content: center;
-		padding: 16px;
+		width: 100%;
+		max-width: 400px;
+		padding: 1rem;
+	}
+
+	#channels {
+		padding: 0;
+		width: 100%;
+	}
+
+	#channels li {
+		background: white;
+		width: 100%;
+		padding: 1.75rem 0;
+		border-radius: 0.5rem;
+		list-style-type: none;
+		font-size: 1.5rem;
+		margin: 0.75rem 0;
+		text-align: center;
 	}
 </style>
