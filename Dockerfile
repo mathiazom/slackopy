@@ -18,8 +18,11 @@ RUN chmod +x /usr/local/bin/rebuild.sh
 # Setup cron job for nightly rebuild (2 AM)
 RUN echo '0 2 * * * /usr/local/bin/rebuild.sh >> /var/log/cron.log 2>&1' | crontab -
 
-# Create startup script
+# Create startup script that builds on startup
 RUN echo '#!/bin/bash\n\
+echo "Building site on startup..."\n\
+/usr/local/bin/rebuild.sh\n\
+echo "Starting services..."\n\
 service cron start\n\
 apache2ctl -D FOREGROUND' > /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
