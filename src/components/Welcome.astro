@@ -1,4 +1,6 @@
 ---
+const {name} = Astro.props;
+
 import background from '../assets/background.svg';
 
 const backendUrl = import.meta.env.BACKEND_URL;
@@ -12,6 +14,9 @@ const channels = data.channels as {id: string, name: string}[];
 	<img id="background" src={background.src} alt="" fetchpriority="high" />
 	<main>
 		<section id="hero">
+			{name && (
+				<h1>Hei, {name}</h1>
+			)}
 			<ul id="channels">
 				{channels.map((channel) => (
 					<li>{channel.name}</li>

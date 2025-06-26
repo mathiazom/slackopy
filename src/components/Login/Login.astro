@@ -1,0 +1,10 @@
+---
+import { SignIn } from 'auth-astro/components'
+import styles from "./Login.module.css"
+export const prerender = false; // Not needed in 'server' mode
+
+---
+<div class={styles.root}>
+    <h1>🔬 slackopy</h1>
+    <SignIn provider={"fusionauth"} class={styles.signIn}>Logg inn</SignIn>
+</div>

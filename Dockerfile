@@ -4,7 +4,6 @@ WORKDIR /app
 # Install cron and httpd
 RUN apt-get update && apt-get install -y \
     cron \
-    apache2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy application files
@@ -24,9 +23,11 @@ echo "Building site on startup..."\n\
 /usr/local/bin/rebuild.sh\n\
 echo "Starting services..."\n\
 service cron start\n\
-apache2ctl -D FOREGROUND' > /usr/local/bin/start.sh
+node ./dist/server/entry.mjs' > /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-EXPOSE 80
+ENV HOST=0.0.0.0
+ENV PORT=4321
+EXPOSE 4321
 
 CMD ["/usr/local/bin/start.sh"]
