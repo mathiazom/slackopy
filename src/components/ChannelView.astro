@@ -1,4 +1,6 @@
 ---
+import { renderMessageText } from "../lib/renderMessageText";
+
 const { channelId } = Astro.props;
 
 const backendUrl = process.env.BACKEND_URL;
@@ -32,15 +34,15 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
 {data ? (
 	<>
 		<h1>#{data.channel.name}</h1>
-		{data.channel.topic && <p>{data.channel.topic}</p>}
+		{data.channel.topic && <p set:html={renderMessageText(data.channel.topic)} />}
 		<ul>
 			{data.messages.map((message) => (
 				<li>
 					<p>{message.authorName}</p>
-					{message.text && <p>{message.text}</p>}
+					{message.text && <p set:html={renderMessageText(message.text)} />}
 					{message.files.map((file) => (
 						file.mimetype?.startsWith("image/") ? (
-							<img src={file.url} alt={file.name ?? ""} />
+							<img src={file.url} alt={file.name ?? ""} style="max-width: min(100%, 480px); height: auto;" />
 						) : (
 							<a href={file.url} target="_blank" rel="noopener noreferrer">
 								{file.name ?? file.id}
@@ -52,10 +54,10 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
 							{message.replies.map((reply) => (
 								<li>
 									<p>{reply.authorName}</p>
-									{reply.text && <p>{reply.text}</p>}
+									{reply.text && <p set:html={renderMessageText(reply.text)} />}
 									{reply.files.map((file) => (
 										file.mimetype?.startsWith("image/") ? (
-											<img src={file.url} alt={file.name ?? ""} />
+											<img src={file.url} alt={file.name ?? ""} style="max-width: min(100%, 480px); height: auto;" />
 										) : (
 											<a href={file.url} target="_blank" rel="noopener noreferrer">
 												{file.name ?? file.id}

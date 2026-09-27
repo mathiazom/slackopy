@@ -12,6 +12,7 @@
     "@astrojs/node": "^9.2.2",
     "@auth/core": "^0.37.4",
     "astro": "^5.10.1",
-    "auth-astro": "^4.2.0"
+    "auth-astro": "^4.2.0",
+    "gemoji": "^8.1.0"
   }
 }
