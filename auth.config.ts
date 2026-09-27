@@ -22,6 +22,8 @@ async function insecureUserinfoRequest({ tokens, provider }: UserinfoRequestArgs
 }
 
 export default defineConfig({
+    secret: process.env.AUTH_SECRET,
+    trustHost: process.env.AUTH_TRUST_HOST === "true",
     providers: [
         FusionAuth({
             clientId: process.env.FUSIONAUTH_CLIENT_ID,
