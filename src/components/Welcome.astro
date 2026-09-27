@@ -1,8 +1,6 @@
 ---
 const {name} = Astro.props;
 
-import background from '../assets/background.svg';
-
 const backendUrl = import.meta.env.BACKEND_URL;
 
 const response = await fetch(`${backendUrl}/channels`);
@@ -10,66 +8,9 @@ const data = await response.json();
 const channels = data.channels as {id: string, name: string}[];
 ---
 
-<div id="container">
-	<img id="background" src={background.src} alt="" fetchpriority="high" />
-	<main>
-		<section id="hero">
-			{name && (
-				<h1>Hei, {name}</h1>
-			)}
-			<ul id="channels">
-				{channels.map((channel) => (
-					<li>{channel.name}</li>
-				))}
-			</ul>
-		</section>
-	</main>
-</div>
-
-<style>
-	#background {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		z-index: -1;
-		filter: blur(100px);
-	}
-
-	#container {
-		height: 100%;
-	}
-
-	main {
-		height: 100%;
-		display: flex;
-		justify-content: center;
-	}
-
-	#hero {
-		display: flex;
-		align-items: start;
-		flex-direction: column;
-		justify-content: center;
-		width: 100%;
-		max-width: 400px;
-		padding: 1rem;
-	}
-
-	#channels {
-		padding: 0;
-		width: 100%;
-	}
-
-	#channels li {
-		background: white;
-		width: 100%;
-		padding: 1.75rem 0;
-		border-radius: 0.5rem;
-		list-style-type: none;
-		font-size: 1.5rem;
-		margin: 0.75rem 0;
-		text-align: center;
-	}
-</style>
+{name && <h1>Hei, {name}</h1>}
+<ul>
+	{channels.map((channel) => (
+		<li>{channel.name}</li>
+	))}
+</ul>

@@ -3,7 +3,6 @@ import { getSession } from 'auth-astro/server';
 import Welcome from "../components/Welcome.astro";
 import Layout from "../layouts/Layout.astro";
 import Login from "../components/Login/Login.astro";
-import styles from "./index.module.css";
 
 export const prerender = false;
 
@@ -14,9 +13,7 @@ const session = await getSession(Astro.request);
 		session ? (
 			<Welcome name={session.user?.name} />
 		) : (
-			<div class={styles.login}>
-                <Login />
-            </div>
+			<Login />
 		)
 	}
 </Layout>
