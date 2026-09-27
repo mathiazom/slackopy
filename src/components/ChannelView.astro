@@ -17,6 +17,7 @@ type MessageResponse = {
 	text: string | null;
 	authorName: string;
 	files: FileResponse[];
+	replies: MessageResponse[];
 };
 
 type ChannelResponse = {
@@ -46,6 +47,25 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
 							</a>
 						)
 					))}
+					{message.replies.length > 0 && (
+						<ul>
+							{message.replies.map((reply) => (
+								<li>
+									<p>{reply.authorName}</p>
+									{reply.text && <p>{reply.text}</p>}
+									{reply.files.map((file) => (
+										file.mimetype?.startsWith("image/") ? (
+											<img src={file.url} alt={file.name ?? ""} />
+										) : (
+											<a href={file.url} target="_blank" rel="noopener noreferrer">
+												{file.name ?? file.id}
+											</a>
+										)
+									))}
+								</li>
+							))}
+						</ul>
+					)}
 				</li>
 			))}
 		</ul>
