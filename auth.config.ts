@@ -1,7 +1,7 @@
 import { defineConfig } from 'auth-astro';
 import FusionAuth from "@auth/core/providers/fusionauth";
 
-const fusionAuthUrl = import.meta.env.FUSIONAUTH_URL;
+const fusionAuthUrl = process.env.FUSIONAUTH_URL as string;
 
 type UserinfoRequestArgs = {
     tokens: { access_token?: string };
@@ -24,10 +24,10 @@ async function insecureUserinfoRequest({ tokens, provider }: UserinfoRequestArgs
 export default defineConfig({
     providers: [
         FusionAuth({
-            clientId: import.meta.env.FUSIONAUTH_CLIENT_ID,
-            clientSecret: import.meta.env.FUSIONAUTH_CLIENT_SECRET,
+            clientId: process.env.FUSIONAUTH_CLIENT_ID,
+            clientSecret: process.env.FUSIONAUTH_CLIENT_SECRET,
             issuer: fusionAuthUrl,
-            redirectProxyUrl: `${import.meta.env.HOST_URL}/api/auth`,
+            redirectProxyUrl: `${process.env.HOST_URL}/api/auth`,
             token: `${fusionAuthUrl}/oauth2/token`,
             // @auth/core's built-in userinfo fetch (this code path, taken since we don't set
             // idToken: false) never passes oauth4webapi's allowInsecureRequests option, so it
