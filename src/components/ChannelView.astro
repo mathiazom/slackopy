@@ -1,0 +1,55 @@
+---
+const { channelId } = Astro.props;
+
+const backendUrl = import.meta.env.BACKEND_URL;
+
+const response = await fetch(`${backendUrl}/channels/${channelId}`);
+
+type FileResponse = {
+	id: string;
+	name: string | null;
+	mimetype: string | null;
+	url: string;
+};
+
+type MessageResponse = {
+	id: string;
+	text: string | null;
+	authorName: string;
+	files: FileResponse[];
+};
+
+type ChannelResponse = {
+	channel: { id: string; name: string; topic: string | null };
+	messages: MessageResponse[];
+};
+
+const data = response.ok ? (await response.json() as ChannelResponse) : null;
+---
+
+<a href="/">&larr; slackopy</a>
+{data ? (
+	<>
+		<h1>#{data.channel.name}</h1>
+		{data.channel.topic && <p>{data.channel.topic}</p>}
+		<ul>
+			{data.messages.map((message) => (
+				<li>
+					<p>{message.authorName}</p>
+					{message.text && <p>{message.text}</p>}
+					{message.files.map((file) => (
+						file.mimetype?.startsWith("image/") ? (
+							<img src={file.url} alt={file.name ?? ""} />
+						) : (
+							<a href={file.url} target="_blank" rel="noopener noreferrer">
+								{file.name ?? file.id}
+							</a>
+						)
+					))}
+				</li>
+			))}
+		</ul>
+	</>
+) : (
+	<p>Channel not found.</p>
+)}

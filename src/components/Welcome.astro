@@ -11,6 +11,6 @@ const channels = data.channels as {id: string, name: string}[];
 {name && <h1>Hei, {name}</h1>}
 <ul>
 	{channels.map((channel) => (
-		<li>{channel.name}</li>
+		<li><a href={`/channels/${channel.id}`}>{channel.name}</a></li>
 	))}
 </ul>
