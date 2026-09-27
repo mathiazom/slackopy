@@ -1,7 +1,7 @@
 ---
 const { channelId } = Astro.props;
 
-const backendUrl = import.meta.env.BACKEND_URL;
+const backendUrl = process.env.BACKEND_URL;
 
 const response = await fetch(`${backendUrl}/channels/${channelId}`);
 
