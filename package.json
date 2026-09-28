@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "env $(cat .env | xargs) astro dev",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
@@ -13,6 +13,6 @@
     "@auth/core": "^0.37.4",
     "astro": "^5.10.1",
     "auth-astro": "^4.2.0",
-    "gemoji": "^8.1.0"
+    "slackmoji": "^1.1.0"
   }
 }

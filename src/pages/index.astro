@@ -1,6 +1,6 @@
 ---
 import { getSession } from 'auth-astro/server';
-import Welcome from "../components/Welcome.astro";
+import Channels from "../components/Channels.astro";
 import Layout from "../layouts/Layout.astro";
 import Login from "../components/Login/Login.astro";
 
@@ -11,7 +11,7 @@ const session = await getSession(Astro.request);
 <Layout>
 	{
 		session ? (
-			<Welcome name={session.user?.name} />
+			<Channels />
 		) : (
 			<Login />
 		)

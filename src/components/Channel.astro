@@ -1,0 +1,156 @@
+---
+import {renderMessageText} from "../lib/renderMessageText";
+
+const {channelId} = Astro.props;
+
+const backendUrl = process.env.BACKEND_URL;
+
+const response = await fetch(`${backendUrl}/channels/${channelId}`);
+
+type FileResponse = {
+    id: string;
+    name: string | null;
+    mimetype: string | null;
+    url: string;
+};
+
+type MessageResponse = {
+    id: string;
+    text: string | null;
+    authorDisplayName: string;
+    authorRealName: string;
+    timestamp: string;
+    files: FileResponse[];
+    replies: MessageResponse[];
+};
+
+type ChannelResponse = {
+    channel: { id: string; name: string; topic: string | null };
+    messages: MessageResponse[];
+};
+
+const data = response.ok ? (await response.json() as ChannelResponse) : null;
+
+function renderTimestamp(timestamp: string) {
+    return new Date(timestamp).toLocaleString(new Intl.Locale('no'))
+}
+---
+
+<style>
+    .list {
+        padding: 0;
+    }
+
+    .item {
+        margin: 0;
+        padding: 0;
+        text-indent: 0;
+        list-style-type: none;
+    }
+
+    .threadParent {
+        padding-block-start: 1rem;
+    }
+
+    .message {
+        border: 1px solid black;
+        margin: 1rem 0;
+        padding-inline: 1rem
+    }
+
+    .files {
+        margin-block: 0.5rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, 480px);
+        gap: 1rem;
+    }
+
+    .thread {
+        padding: 0;
+    }
+
+    .thread__header {
+        margin-block: 1rem;
+    }
+
+    .thread .message {
+        border-left: 0.5rem solid black;
+    }
+</style>
+
+<a href="/">&larr; channels</a>
+{data ? (
+<>
+    <h1>#{data.channel.name}</h1>
+    {data.channel.topic && <p set:html={renderMessageText(data.channel.topic)}/>}
+    <ul class="list">
+        {data.messages.map((message) => (
+                <li class="item">
+                    <div class="message threadParent">
+                        <b title={message.authorRealName}>{message.authorDisplayName}</b> (
+                        <time datetime={message.timestamp}>{renderTimestamp(message.timestamp)}</time>
+                        )
+                        {message.text && <p set:html={renderMessageText(message.text)}/>}
+                        {message.files.length > 0 && (
+                                <div class="files">
+                                    {message.files.map((file) => (
+                                        file.mimetype?.startsWith("image/") ? (
+                                                <img src={file.url} alt={file.name ?? ""}
+                                                     style="max-width: min(100%, 480px); border: 1px solid black;"/>
+                                        ) : (
+                                                <a href={file.url} target="_blank" rel="noopener noreferrer">
+                                                    {file.name ?? file.id}
+                                                </a>
+                                        )
+                                    ))}
+                                </div>
+                        )}
+                        {message.replies.length > 0 && (
+                                <details>
+                                    <summary class="thread__header">
+                                        {message.replies.length} svar
+                                    </summary>
+                                    {message.replies.length > 0 && (
+                                            <ul class="thread">
+                                                {message.replies.map((reply) => (
+                                                        <li class="item">
+                                                            <div class="message">
+                                                                <p>
+                                                                    <b title={reply.authorRealName}>{reply.authorDisplayName}</b>
+                                                                    (
+                                                                    <time datetime={reply.timestamp}>{renderTimestamp(message.timestamp)}</time>
+                                                                    )
+                                                                </p>
+                                                                {reply.text &&
+                                                                        <p set:html={renderMessageText(reply.text)}/>}
+                                                                {reply.files.length > 0 && (
+                                                                    <div class="files">
+                                                                        {reply.files.map((file) => (
+                                                                            file.mimetype?.startsWith("image/") ? (
+                                                                                    <img src={file.url} alt={file.name ?? ""}
+                                                                                         style="max-width: min(100%, 480px); border: 1px solid black;"/>
+                                                                            ) : (
+                                                                                    <a href={file.url} target="_blank"
+                                                                                       rel="noopener noreferrer">
+                                                                                        {file.name ?? file.id}
+                                                                                    </a>
+                                                                            )
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </li>
+                                                ))}
+                                            </ul>
+                                    )}
+                                </details>
+                        )}
+                    </div>
+                </li>
+        ))}
+    </ul>
+</>
+    ) : (
+<p>Channel not found.</p>
+    )}
+

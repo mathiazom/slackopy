@@ -2,5 +2,24 @@
 import { SignIn } from 'auth-astro/components'
 export const prerender = false; // Not needed in 'server' mode
 ---
-<h1>🔬 slackopy</h1>
-<SignIn provider={"fusionauth"}>Logg inn</SignIn>
+
+<style>
+    button {
+        padding: 0.75rem 1rem;
+        background: none;
+        border: 2px solid black;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    button:hover {
+        background: #eee;
+    }
+    button:active {
+        background: #bbb;
+    }
+</style>
+
+<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2rem; margin-block-start: 5rem">
+    <h1><img alt="slackcat" src="/favicon.svg" width="200" /></h1>
+    <SignIn provider={"fusionauth"}>Logg inn</SignIn>
+</div>

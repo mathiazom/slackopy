@@ -1,9 +1,9 @@
-import { nameToEmoji } from "gemoji";
-
 // Slack escapes literal &, <, > in stored message text as HTML entities, purely
 // to disambiguate from its own <@...>/<#...>/<https://...> syntax - it's not HTML.
 // Must be undone before our own HTML-escaping, or a literal "&gt;" in a message
 // (e.g. "a -&gt; b") would double-escape into the visibly-broken "-&amp;gt;".
+import {emojify} from "slackmoji";
+
 function decodeSlackEntities(text: string): string {
 	const entities: Record<string, string> = { amp: "&", lt: "<", gt: ">" };
 	return text.replace(/&(amp|lt|gt);/g, (_, name: string) => entities[name]);
@@ -46,7 +46,7 @@ function renderInline(text: string): string {
 		if (emojiUrl !== undefined) {
 			html += `<img src="${escapeHtml(emojiUrl)}" alt="${escapeHtml(`:${emojiName}:`)}" width="20" height="20" />`;
 		} else if (shortcode !== undefined) {
-			html += escapeHtml(nameToEmoji[shortcode] ?? `:${shortcode}:`);
+			html += escapeHtml(emojify(`:${shortcode}:`));
 		} else if (linkUrl !== undefined) {
 			html += `<a href="${escapeHtml(linkUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkLabel ?? linkUrl)}</a>`;
 		} else if (bold !== undefined) {
