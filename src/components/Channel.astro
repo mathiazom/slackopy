@@ -60,9 +60,16 @@ function renderTimestamp(timestamp: string) {
 
     .files {
         margin-block: 0.5rem;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, 480px);
+        display: flex;
+        flex-wrap: wrap;
         gap: 1rem;
+    }
+
+    .image {
+        max-width: min(100%, 480px);
+        height: 100%;
+        width: auto;
+        border: 1px solid black;
     }
 
     .thread {
@@ -96,7 +103,7 @@ function renderTimestamp(timestamp: string) {
                                     {message.files.map((file) => (
                                         file.mimetype?.startsWith("image/") ? (
                                                 <img src={file.url} alt={file.name ?? ""}
-                                                     style="max-width: min(100%, 480px); border: 1px solid black;"/>
+                                                     class="image"/>
                                         ) : (
                                                 <a href={file.url} target="_blank" rel="noopener noreferrer">
                                                     {file.name ?? file.id}
@@ -124,19 +131,21 @@ function renderTimestamp(timestamp: string) {
                                                                 {reply.text &&
                                                                         <p set:html={renderMessageText(reply.text)}/>}
                                                                 {reply.files.length > 0 && (
-                                                                    <div class="files">
-                                                                        {reply.files.map((file) => (
-                                                                            file.mimetype?.startsWith("image/") ? (
-                                                                                    <img src={file.url} alt={file.name ?? ""}
-                                                                                         style="max-width: min(100%, 480px); border: 1px solid black;"/>
-                                                                            ) : (
-                                                                                    <a href={file.url} target="_blank"
-                                                                                       rel="noopener noreferrer">
-                                                                                        {file.name ?? file.id}
-                                                                                    </a>
-                                                                            )
-                                                                        ))}
-                                                                    </div>
+                                                                        <div class="files">
+                                                                            {reply.files.map((file) => (
+                                                                                file.mimetype?.startsWith("image/") ? (
+                                                                                        <img src={file.url}
+                                                                                             alt={file.name ?? ""}
+                                                                                             class="image"/>
+                                                                                ) : (
+                                                                                        <a href={file.url}
+                                                                                           target="_blank"
+                                                                                           rel="noopener noreferrer">
+                                                                                            {file.name ?? file.id}
+                                                                                        </a>
+                                                                                )
+                                                                            ))}
+                                                                        </div>
                                                                 )}
                                                             </div>
                                                         </li>
