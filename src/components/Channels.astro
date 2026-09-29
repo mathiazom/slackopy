@@ -5,7 +5,7 @@ const response = await fetch(`${backendUrl}/channels`);
 const data = await response.json();
 const channels = data.channels as {id: string, name: string}[];
 ---
-<ul style="display: flex; flex-direction: column; list-style: none; padding: 1rem; margin: 0; font-size: 1.5rem; gap: 1rem;">
+<ul style="display: flex; flex-direction: column; list-style: none; padding: 1rem; margin: 0; font-size: 1.25rem; gap: 1rem;">
 	{channels.map((channel) => (
 		<li><a href={`/channels/${channel.id}`}>#{channel.name}</a></li>
 	))}
