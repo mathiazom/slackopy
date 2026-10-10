@@ -55,7 +55,12 @@ function renderTimestamp(timestamp: string) {
     .message {
         border: 1px solid black;
         margin: 1rem 0;
-        padding-inline: 1rem
+        padding-inline: 1rem;
+        overflow-wrap: anywhere;
+    }
+
+    .topic {
+        overflow-wrap: anywhere;
     }
 
     .files {
@@ -89,7 +94,7 @@ function renderTimestamp(timestamp: string) {
 {data ? (
 <>
     <h1>#{data.channel.name}</h1>
-    {data.channel.topic && <p set:html={renderMessageText(data.channel.topic)}/>}
+    {data.channel.topic && <p class="topic" set:html={renderMessageText(data.channel.topic)}/>}
     <ul class="list">
         {data.messages.map((message) => (
                 <li class="item">
