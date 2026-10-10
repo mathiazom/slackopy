@@ -88,7 +88,10 @@ function renderPlain(text: string): string {
 // shortcode isn't always auto-converted to the real character before storage.
 // A trailing skin tone (":+1::skin-tone-3:") is part of the same token, so the
 // modifier isn't split from its base emoji into a separate element.
-const TOKEN_PATTERN = /<emoji:([^|>]+)\|([^>]+)>|<(https?:\/\/[^|>]+)(?:\|([^>]*))?>|(?<![\w*])\*([^*\n]+)\*(?![\w*])|(?<![\w_])_([^_\n]+)_(?![\w_])|(?<![\w~])~([^~\n]+)~(?![\w~])|```([^`]+)```|(?<![\w`])`([^`\n]+)`(?![\w`])|:([a-z0-9_+-]+(?:::skin-tone-[2-6])?):/g;
+// User/channel mentions arrive with their name already filled in by slackback
+// (only archived channels keep the <#...> form, so every one can be linked).
+// @here/@channel/@everyone may carry a redundant |label, which is ignored.
+const TOKEN_PATTERN = /<emoji:([^|>]+)\|([^>]+)>|<@[UW][A-Z0-9]+\|([^>]*)>|<#([CG][A-Z0-9]+)\|([^>]*)>|<!(here|channel|everyone)(?:\|[^>]*)?>|<(https?:\/\/[^|>]+)(?:\|([^>]*))?>|(?<![\w*])\*([^*\n]+)\*(?![\w*])|(?<![\w_])_([^_\n]+)_(?![\w_])|(?<![\w~])~([^~\n]+)~(?![\w~])|```([^`]+)```|(?<![\w`])`([^`\n]+)`(?![\w`])|:([a-z0-9_+-]+(?:::skin-tone-[2-6])?):/g;
 
 // Everything outside a recognized token is escaped before being written out, so
 // this is the only place message text becomes real HTML rather than plain text.
@@ -99,9 +102,15 @@ function renderInline(text: string): string {
 	for (const match of text.matchAll(TOKEN_PATTERN)) {
 		html += renderPlain(text.slice(lastIndex, match.index));
 
-		const [, emojiUrl, emojiName, linkUrl, linkLabel, bold, italic, strike, codeBlock, code, shortcode] = match;
+		const [, emojiUrl, emojiName, userName, channelId, channelName, specialMention, linkUrl, linkLabel, bold, italic, strike, codeBlock, code, shortcode] = match;
 		if (emojiUrl !== undefined) {
 			html += `<img src="${escapeHtml(emojiUrl)}" alt="${escapeHtml(`:${emojiName}:`)}" title="${escapeHtml(`:${emojiName}:`)}" width="20" height="20" />`;
+		} else if (userName !== undefined) {
+			html += `<span class="mention">@${renderPlain(userName)}</span>`;
+		} else if (channelId !== undefined) {
+			html += `<a class="mention" href="/channels/${escapeHtml(channelId)}">#${renderPlain(channelName)}</a>`;
+		} else if (specialMention !== undefined) {
+			html += `<span class="mention mention--special">@${specialMention}</span>`;
 		} else if (shortcode !== undefined) {
 			const char = emojify(`:${shortcode}:`);
 			html += char !== `:${shortcode}:` ? renderEmoji(char, shortcode) : escapeHtml(char);

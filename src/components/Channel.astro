@@ -100,6 +100,25 @@ function renderTimestamp(timestamp: string) {
     .thread .message {
         border-left: 0.5rem solid black;
     }
+
+    /* Mentions come from renderMessageText via set:html, so they're outside
+       this component's scoped styles. Colors follow Slack's own. */
+    :global(.mention) {
+        padding-inline: 2px;
+        border-radius: 3px;
+        background: rgba(29, 155, 209, 0.1);
+        color: #1264a3;
+        text-decoration: none;
+    }
+
+    :global(a.mention:hover) {
+        background: rgba(29, 155, 209, 0.2);
+    }
+
+    :global(.mention--special) {
+        background: rgba(242, 199, 68, 0.4);
+        color: inherit;
+    }
 </style>
 
 <a href="/">&larr; kanaler</a>
