@@ -73,6 +73,12 @@ function renderPlain(text: string): string {
 	return html + escapeHtml(text.slice(lastIndex));
 }
 
+// Message text between tokens, with its line breaks kept - HTML would otherwise
+// collapse them into spaces. Code blocks keep theirs via <pre> instead.
+function renderLines(text: string): string {
+	return text.split("\n").map(renderPlain).join("<br>");
+}
+
 // Slack's mrkdwn, not standard Markdown: single-character markers, no nesting.
 // Only http(s) links are matched by construction, so there's no separate scheme
 // check needed to keep out javascript: links. Formatting markers require a
@@ -93,16 +99,30 @@ function renderPlain(text: string): string {
 // @here/@channel/@everyone may carry a redundant |label, which is ignored.
 const TOKEN_PATTERN = /<emoji:([^|>]+)\|([^>]+)>|<@[UW][A-Z0-9]+\|([^>]*)>|<#([CG][A-Z0-9]+)\|([^>]*)>|<!(here|channel|everyone)(?:\|[^>]*)?>|<(https?:\/\/[^|>]+)(?:\|([^>]*))?>|(?<![\w*])\*([^*\n]+)\*(?![\w*])|(?<![\w_])_([^_\n]+)_(?![\w_])|(?<![\w~])~([^~\n]+)~(?![\w~])|```([^`]+)```|(?<![\w`])`([^`\n]+)`(?![\w`])|:([a-z0-9_+-]+(?:::skin-tone-[2-6])?):/g;
 
+// A code block is already a block of its own, so the single newline that puts it
+// on its own line in Slack would otherwise show up as an extra blank line on
+// either side. Slack absorbs it the same way.
+function trimCodeBlockNewlines(text: string, afterCodeBlock: boolean, beforeCodeBlock: boolean): string {
+	if (afterCodeBlock && text.startsWith("\n")) {
+		text = text.slice(1);
+	}
+	if (beforeCodeBlock && text.endsWith("\n")) {
+		text = text.slice(0, -1);
+	}
+	return text;
+}
+
 // Everything outside a recognized token is escaped before being written out, so
 // this is the only place message text becomes real HTML rather than plain text.
 function renderInline(text: string): string {
 	let html = "";
 	let lastIndex = 0;
+	let afterCodeBlock = false;
 
 	for (const match of text.matchAll(TOKEN_PATTERN)) {
-		html += renderPlain(text.slice(lastIndex, match.index));
-
 		const [, emojiUrl, emojiName, userName, channelId, channelName, specialMention, linkUrl, linkLabel, bold, italic, strike, codeBlock, code, shortcode] = match;
+		html += renderLines(trimCodeBlockNewlines(text.slice(lastIndex, match.index), afterCodeBlock, codeBlock !== undefined));
+		afterCodeBlock = codeBlock !== undefined;
 		if (emojiUrl !== undefined) {
 			html += `<img src="${escapeHtml(emojiUrl)}" alt="${escapeHtml(`:${emojiName}:`)}" title="${escapeHtml(`:${emojiName}:`)}" width="20" height="20" />`;
 		} else if (userName !== undefined) {
@@ -131,7 +151,7 @@ function renderInline(text: string): string {
 		lastIndex = match.index + match[0].length;
 	}
 
-	html += renderPlain(text.slice(lastIndex));
+	html += renderLines(trimCodeBlockNewlines(text.slice(lastIndex), afterCodeBlock, false));
 
 	return html;
 }

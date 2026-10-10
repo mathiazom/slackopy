@@ -71,6 +71,12 @@ function renderTimestamp(timestamp: string) {
         overflow: hidden;
     }
 
+    /* Rendered message text can contain <blockquote>/<pre>, which a <p> can't
+       hold, so these are <div>s with a <p>'s default margins. */
+    .topic, .text {
+        margin-block: 1em;
+    }
+
     .topic {
         overflow-wrap: anywhere;
     }
@@ -127,7 +133,7 @@ function renderTimestamp(timestamp: string) {
     <div class="channelName">
         <h1 style={`--chars: ${data.channel.name.length + 1}`}>#{data.channel.name}</h1>
     </div>
-    {data.channel.topic && <p class="topic" set:html={renderMessageText(data.channel.topic)}/>}
+    {data.channel.topic && <div class="topic" set:html={renderMessageText(data.channel.topic)}/>}
     <ul class="list">
         {data.messages.map((message) => (
                 <li class="item">
@@ -135,7 +141,7 @@ function renderTimestamp(timestamp: string) {
                         <b title={message.authorRealName}>{message.authorDisplayName}</b> (
                         <time datetime={message.timestamp}>{renderTimestamp(message.timestamp)}</time>
                         )
-                        {message.text && <p set:html={renderMessageText(message.text)}/>}
+                        {message.text && <div class="text" set:html={renderMessageText(message.text)}/>}
                         {message.files.length > 0 && (
                                 <div class="files">
                                     {message.files.map((file) => (
@@ -168,7 +174,7 @@ function renderTimestamp(timestamp: string) {
                                                                     )
                                                                 </p>
                                                                 {reply.text &&
-                                                                        <p set:html={renderMessageText(reply.text)}/>}
+                                                                        <div class="text" set:html={renderMessageText(reply.text)}/>}
                                                                 {reply.files.length > 0 && (
                                                                         <div class="files">
                                                                             {reply.files.map((file) => (
