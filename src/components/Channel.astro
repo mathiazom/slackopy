@@ -59,6 +59,16 @@ function renderTimestamp(timestamp: string) {
         overflow-wrap: anywhere;
     }
 
+    .channelName {
+        container-type: inline-size;
+    }
+
+    .channelName h1 {
+        font-size: min(2em, calc(100cqw / (var(--chars) * 0.55)));
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
     .topic {
         overflow-wrap: anywhere;
     }
@@ -93,7 +103,9 @@ function renderTimestamp(timestamp: string) {
 <a href="/">&larr; kanaler</a>
 {data ? (
 <>
-    <h1>#{data.channel.name}</h1>
+    <div class="channelName">
+        <h1 style={`--chars: ${data.channel.name.length + 1}`}>#{data.channel.name}</h1>
+    </div>
     {data.channel.topic && <p class="topic" set:html={renderMessageText(data.channel.topic)}/>}
     <ul class="list">
         {data.messages.map((message) => (
