@@ -125,7 +125,7 @@ function renderTimestamp(timestamp: string) {
                                                                 <p>
                                                                     <b title={reply.authorRealName}>{reply.authorDisplayName}</b>
                                                                     (
-                                                                    <time datetime={reply.timestamp}>{renderTimestamp(message.timestamp)}</time>
+                                                                    <time datetime={reply.timestamp}>{renderTimestamp(reply.timestamp)}</time>
                                                                     )
                                                                 </p>
                                                                 {reply.text &&
