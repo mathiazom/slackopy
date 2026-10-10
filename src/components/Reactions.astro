@@ -1,0 +1,125 @@
+---
+import {emojify} from "slackmoji";
+
+export type ReactionResponse = {
+    name: string;
+    imageUrl: string | null;
+    count: number;
+    users: { displayName: string; realName: string }[];
+};
+
+const {messageId, reactions} = Astro.props as { messageId: string; reactions: ReactionResponse[] };
+
+// Message ids are Slack timestamps ("1712345678.123456"), and a "." isn't valid
+// in the dashed ident that anchor-name needs, so the id is sanitized for both.
+const idPrefix = `reaction-${messageId.replace(/[^a-zA-Z0-9-]/g, "-")}`;
+---
+
+<style>
+    .reactions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-block: 0.5rem;
+        padding: 0;
+    }
+
+    .reaction {
+        list-style-type: none;
+    }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font: inherit;
+        /* Line boxes taller than the glyphs would center the boxes, not the
+           emoji and count themselves. */
+        line-height: 1;
+        color: inherit;
+        background: none;
+        border: 1px solid black;
+        border-radius: 1rem;
+        padding: 0.25rem 0.5rem;
+        cursor: pointer;
+    }
+
+    /* Same box for Unicode and custom (image) emoji, so pills line up either way. */
+    .emoji {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+    }
+
+    .popover {
+        border: 1px solid black;
+        padding: 0.5rem 1rem;
+    }
+
+    .popover__emoji {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-block: 0 0.5rem;
+    }
+
+    .popover__users {
+        margin: 0;
+        padding: 0;
+        list-style-type: none;
+    }
+
+    @supports (anchor-name: --a) {
+        .popover {
+            inset: auto;
+            margin: 0.25rem 0;
+            position-area: block-end span-inline-end;
+            position-try-fallbacks: flip-block, flip-inline;
+        }
+    }
+
+    /* Without anchor positioning a popover would open centered in the viewport,
+       detached from its pill - a bottom sheet reads as intentional instead. */
+    @supports not (anchor-name: --a) {
+        .popover {
+            inset: auto 0 0 0;
+            margin: 0;
+            width: 100%;
+            max-width: none;
+            box-sizing: border-box;
+        }
+    }
+</style>
+
+{reactions.length > 0 && (
+        <ul class="reactions">
+            {reactions.map((reaction, index) => {
+                const id = `${idPrefix}-${index}`;
+                const emoji = reaction.imageUrl ? (
+                        <img class="emoji" src={reaction.imageUrl} alt={`:${reaction.name}:`} width="20" height="20"/>
+                ) : (
+                        <span class="emoji">{emojify(`:${reaction.name}:`)}</span>
+                );
+                // Count is authoritative - Slack can truncate the users list on
+                // heavily-reacted messages, so any remainder is summarized.
+                const others = reaction.count - reaction.users.length;
+                return (
+                        <li class="reaction">
+                            <button class="pill" popovertarget={id} style={`anchor-name: --${id}`}>
+                                {emoji}
+                                <span>{reaction.count}</span>
+                            </button>
+                            <div class="popover" id={id} popover style={`position-anchor: --${id}`}>
+                                <p class="popover__emoji">{emoji} <code>:{reaction.name}:</code></p>
+                                <ul class="popover__users">
+                                    {reaction.users.map((user) => <li title={user.realName}>{user.displayName}</li>)}
+                                    {others > 0 && <li>+ {others} {others === 1 ? "annen" : "andre"}</li>}
+                                </ul>
+                            </div>
+                        </li>
+                );
+            })}
+        </ul>
+)}

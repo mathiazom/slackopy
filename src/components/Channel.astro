@@ -1,5 +1,6 @@
 ---
 import {renderMessageText} from "../lib/renderMessageText";
+import Reactions, {type ReactionResponse} from "./Reactions.astro";
 
 const {channelId} = Astro.props;
 
@@ -21,6 +22,7 @@ type MessageResponse = {
     authorRealName: string;
     timestamp: string;
     files: FileResponse[];
+    reactions: ReactionResponse[];
     replies: MessageResponse[];
 };
 
@@ -129,6 +131,7 @@ function renderTimestamp(timestamp: string) {
                                     ))}
                                 </div>
                         )}
+                        <Reactions messageId={message.id} reactions={message.reactions}/>
                         {message.replies.length > 0 && (
                                 <details>
                                     <summary class="thread__header">
@@ -164,6 +167,7 @@ function renderTimestamp(timestamp: string) {
                                                                             ))}
                                                                         </div>
                                                                 )}
+                                                                <Reactions messageId={reply.id} reactions={reply.reactions}/>
                                                             </div>
                                                         </li>
                                                 ))}

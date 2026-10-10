@@ -2,7 +2,7 @@
 // to disambiguate from its own <@...>/<#...>/<https://...> syntax - it's not HTML.
 // Must be undone before our own HTML-escaping, or a literal "&gt;" in a message
 // (e.g. "a -&gt; b") would double-escape into the visibly-broken "-&amp;gt;".
-import {emojify} from "slackmoji";
+import {emoji as emojiMap, emojify} from "slackmoji";
 
 function decodeSlackEntities(text: string): string {
 	const entities: Record<string, string> = { amp: "&", lt: "<", gt: ">" };
@@ -18,6 +18,61 @@ function escapeHtml(text: string): string {
 		.replace(/'/g, "&#39;");
 }
 
+// Reverse of slackmoji's shortcode map, for emoji Slack stored as real Unicode
+// characters rather than shortcodes. First shortcode wins, which follows
+// iamcal/emoji-data's order and so Slack's own primary name (👍 is ":+1:", not
+// ":thumbsup:"). Map values are all fully-qualified RGI emoji, the same form
+// UNICODE_EMOJI_PATTERN matches in text, so no normalization is needed. (A bare
+// "❤" without U+FE0F isn't RGI and renders as text, so it gets no title.)
+const shortcodesByEmoji = new Map<string, string>();
+for (const [shortcode, char] of Object.entries(emojiMap)) {
+	if (!shortcodesByEmoji.has(char)) {
+		shortcodesByEmoji.set(char, shortcode);
+	}
+}
+
+const SKIN_TONE_MODIFIER_PATTERN = /[\u{1F3FB}-\u{1F3FF}]/gu;
+
+// Skin-toned emoji aren't in the map themselves, so they're looked up by base
+// emoji and given Slack's own "::skin-tone-N" suffix (U+1F3FB is skin-tone-2).
+// Emoji with several modifiers (e.g. multi-person) have no Slack equivalent of
+// that form, so they get no shortcode.
+function shortcodeForEmoji(char: string): string | undefined {
+	const direct = shortcodesByEmoji.get(char);
+	if (direct !== undefined) {
+		return direct;
+	}
+	const modifiers = char.match(SKIN_TONE_MODIFIER_PATTERN);
+	if (modifiers?.length !== 1) {
+		return undefined;
+	}
+	const base = shortcodeForEmoji(char.replace(SKIN_TONE_MODIFIER_PATTERN, ""));
+	const tone = modifiers[0].codePointAt(0)! - 0x1F3FB + 2;
+	return base !== undefined ? `${base}::skin-tone-${tone}` : undefined;
+}
+
+function renderEmoji(char: string, shortcode: string): string {
+	return `<span title="${escapeHtml(`:${shortcode}:`)}">${escapeHtml(char)}</span>`;
+}
+
+const UNICODE_EMOJI_PATTERN = /\p{RGI_Emoji}/gv;
+
+// Plain (non-code) text, escaped, with any Unicode emoji given their shortcode
+// as a title.
+function renderPlain(text: string): string {
+	let html = "";
+	let lastIndex = 0;
+
+	for (const match of text.matchAll(UNICODE_EMOJI_PATTERN)) {
+		html += escapeHtml(text.slice(lastIndex, match.index));
+		const shortcode = shortcodeForEmoji(match[0]);
+		html += shortcode !== undefined ? renderEmoji(match[0], shortcode) : escapeHtml(match[0]);
+		lastIndex = match.index + match[0].length;
+	}
+
+	return html + escapeHtml(text.slice(lastIndex));
+}
+
 // Slack's mrkdwn, not standard Markdown: single-character markers, no nesting.
 // Only http(s) links are matched by construction, so there's no separate scheme
 // check needed to keep out javascript: links. Formatting markers require a
@@ -31,7 +86,9 @@ function escapeHtml(text: string): string {
 // slackback couldn't resolve (not a custom/archived emoji) falls through to a
 // standard-shortcode lookup here instead, e.g. Slack's own ":smile:" - typing a
 // shortcode isn't always auto-converted to the real character before storage.
-const TOKEN_PATTERN = /<emoji:([^|>]+)\|([^>]+)>|<(https?:\/\/[^|>]+)(?:\|([^>]*))?>|(?<![\w*])\*([^*\n]+)\*(?![\w*])|(?<![\w_])_([^_\n]+)_(?![\w_])|(?<![\w~])~([^~\n]+)~(?![\w~])|```([^`]+)```|(?<![\w`])`([^`\n]+)`(?![\w`])|:([a-z0-9_+-]+):/g;
+// A trailing skin tone (":+1::skin-tone-3:") is part of the same token, so the
+// modifier isn't split from its base emoji into a separate element.
+const TOKEN_PATTERN = /<emoji:([^|>]+)\|([^>]+)>|<(https?:\/\/[^|>]+)(?:\|([^>]*))?>|(?<![\w*])\*([^*\n]+)\*(?![\w*])|(?<![\w_])_([^_\n]+)_(?![\w_])|(?<![\w~])~([^~\n]+)~(?![\w~])|```([^`]+)```|(?<![\w`])`([^`\n]+)`(?![\w`])|:([a-z0-9_+-]+(?:::skin-tone-[2-6])?):/g;
 
 // Everything outside a recognized token is escaped before being written out, so
 // this is the only place message text becomes real HTML rather than plain text.
@@ -40,21 +97,22 @@ function renderInline(text: string): string {
 	let lastIndex = 0;
 
 	for (const match of text.matchAll(TOKEN_PATTERN)) {
-		html += escapeHtml(text.slice(lastIndex, match.index));
+		html += renderPlain(text.slice(lastIndex, match.index));
 
 		const [, emojiUrl, emojiName, linkUrl, linkLabel, bold, italic, strike, codeBlock, code, shortcode] = match;
 		if (emojiUrl !== undefined) {
-			html += `<img src="${escapeHtml(emojiUrl)}" alt="${escapeHtml(`:${emojiName}:`)}" width="20" height="20" />`;
+			html += `<img src="${escapeHtml(emojiUrl)}" alt="${escapeHtml(`:${emojiName}:`)}" title="${escapeHtml(`:${emojiName}:`)}" width="20" height="20" />`;
 		} else if (shortcode !== undefined) {
-			html += escapeHtml(emojify(`:${shortcode}:`));
+			const char = emojify(`:${shortcode}:`);
+			html += char !== `:${shortcode}:` ? renderEmoji(char, shortcode) : escapeHtml(char);
 		} else if (linkUrl !== undefined) {
-			html += `<a href="${escapeHtml(linkUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkLabel ?? linkUrl)}</a>`;
+			html += `<a href="${escapeHtml(linkUrl)}" target="_blank" rel="noopener noreferrer">${linkLabel !== undefined ? renderPlain(linkLabel) : escapeHtml(linkUrl)}</a>`;
 		} else if (bold !== undefined) {
-			html += `<strong>${escapeHtml(bold)}</strong>`;
+			html += `<strong>${renderPlain(bold)}</strong>`;
 		} else if (italic !== undefined) {
-			html += `<em>${escapeHtml(italic)}</em>`;
+			html += `<em>${renderPlain(italic)}</em>`;
 		} else if (strike !== undefined) {
-			html += `<s>${escapeHtml(strike)}</s>`;
+			html += `<s>${renderPlain(strike)}</s>`;
 		} else if (codeBlock !== undefined) {
 			html += `<pre style="white-space: pre-wrap; overflow-wrap: break-word;"><code>${escapeHtml(codeBlock)}</code></pre>`;
 		} else {
@@ -64,7 +122,7 @@ function renderInline(text: string): string {
 		lastIndex = match.index + match[0].length;
 	}
 
-	html += escapeHtml(text.slice(lastIndex));
+	html += renderPlain(text.slice(lastIndex));
 
 	return html;
 }
