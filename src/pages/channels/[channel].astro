@@ -3,11 +3,12 @@ import { getSession } from 'auth-astro/server';
 import Layout from "../../layouts/Layout.astro";
 import Login from "../../components/Login/Login.astro";
 import Channel from "../../components/Channel.astro";
+import {channelIdFromSegment} from "../../lib/channelUrl";
 
 export const prerender = false;
 
 const session = await getSession(Astro.request);
-const { channelId } = Astro.params;
+const channelId = channelIdFromSegment(Astro.params.channel!);
 ---
 <Layout>
 	{

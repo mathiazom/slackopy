@@ -3,6 +3,7 @@
 // Must be undone before our own HTML-escaping, or a literal "&gt;" in a message
 // (e.g. "a -&gt; b") would double-escape into the visibly-broken "-&amp;gt;".
 import {emoji as emojiMap, emojify} from "slackmoji";
+import {channelHref} from "./channelUrl";
 
 function decodeSlackEntities(text: string): string {
 	const entities: Record<string, string> = { amp: "&", lt: "<", gt: ">" };
@@ -128,7 +129,7 @@ function renderInline(text: string): string {
 		} else if (userName !== undefined) {
 			html += `<span class="mention">@${renderPlain(userName)}</span>`;
 		} else if (channelId !== undefined) {
-			html += `<a class="mention" href="/channels/${escapeHtml(channelId)}">#${renderPlain(channelName)}</a>`;
+			html += `<a class="mention" href="${escapeHtml(channelHref(channelId, decodeSlackEntities(channelName)))}">#${renderPlain(channelName)}</a>`;
 		} else if (specialMention !== undefined) {
 			html += `<span class="mention mention--special">@${specialMention}</span>`;
 		} else if (shortcode !== undefined) {
