@@ -1,0 +1,145 @@
+---
+import {renderMessageText} from "../lib/renderMessageText";
+import {groupMessages} from "../lib/groupMessages";
+import Avatar from "./Avatar.astro";
+import Reactions, {type ReactionResponse} from "./Reactions.astro";
+
+type FileResponse = {
+    id: string;
+    name: string | null;
+    mimetype: string | null;
+    url: string;
+};
+
+export type MessageResponse = {
+    id: string;
+    text: string | null;
+    authorDisplayName: string;
+    authorRealName: string;
+    authorId: string | null;
+    authorSnapshotId: number | null;
+    authorAvatarUrl: string | null;
+    authorAvatarLargeUrl: string | null;
+    timestamp: string;
+    files: FileResponse[];
+    reactions: ReactionResponse[];
+    replies: MessageResponse[];
+};
+
+type Props = {
+    // Consecutive messages from one author identity, chronological (see groupMessages).
+    messages: MessageResponse[];
+};
+
+const {messages} = Astro.props;
+const author = messages[0];
+
+function renderTimestamp(timestamp: string) {
+    return new Date(timestamp).toLocaleString(new Intl.Locale('no'))
+}
+---
+
+<style>
+    .group {
+        display: flex;
+        gap: 0.75rem;
+        border: 1px solid black;
+        margin: 0.5rem 0;
+        padding: 1rem;
+        overflow-wrap: anywhere;
+    }
+
+    .content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .header {
+        margin: 0;
+    }
+
+    .message + .message {
+        margin-block-start: 1rem;
+    }
+
+    /* Rendered message text can contain <blockquote>/<pre>, which a <p> can't
+       hold, so these are <div>s with a <p>'s default margins. */
+    .text {
+        margin-block: 0.25em 0.5em;
+    }
+
+    .files {
+        margin-block: 0.5rem 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .image {
+        max-width: min(100%, 480px);
+        height: 100%;
+        width: auto;
+        border: 1px solid black;
+    }
+
+    .thread__header {
+        margin-block: 1rem;
+    }
+
+    /* .content is a flex item, so trailing margins don't collapse into the
+       group's padding and would add to it. Spacing between messages comes from
+       .message + .message instead. */
+    .message > :global(:last-child),
+    .text > :global(:last-child),
+    details:not([open]) > .thread__header,
+    .thread > .group:last-child {
+        margin-block-end: 0;
+    }
+
+    .thread :global(.group) {
+        border-left: 0.5rem solid black;
+    }
+</style>
+
+<div class="group">
+    <Avatar url={author.authorAvatarUrl} largeUrl={author.authorAvatarLargeUrl}
+            colorKey={author.authorId ?? author.authorDisplayName} name={author.authorDisplayName}/>
+    <div class="content">
+        <p class="header">
+            <b title={author.authorRealName}>{author.authorDisplayName}</b> (
+            <time datetime={author.timestamp}>{renderTimestamp(author.timestamp)}</time>
+            )
+        </p>
+        {messages.map((message) => (
+            <div class="message">
+                {message.text && <div class="text" set:html={renderMessageText(message.text)}/>}
+                {message.files.length > 0 && (
+                    <div class="files">
+                        {message.files.map((file) => (
+                            file.mimetype?.startsWith("image/") ? (
+                                <img src={file.url} alt={file.name ?? ""} class="image"/>
+                            ) : (
+                                <a href={file.url} target="_blank" rel="noopener noreferrer">
+                                    {file.name ?? file.id}
+                                </a>
+                            )
+                        ))}
+                    </div>
+                )}
+                <Reactions messageId={message.id} reactions={message.reactions}/>
+                {message.replies.length > 0 && (
+                    <details>
+                        <summary class="thread__header">
+                            {message.replies.length} svar
+                        </summary>
+                        <div class="thread">
+                            {groupMessages(message.replies).map((group) => (
+                                <Astro.self messages={group}/>
+                            ))}
+                        </div>
+                    </details>
+                )}
+            </div>
+        ))}
+    </div>
+</div>

@@ -1,0 +1,57 @@
+---
+type Props = {
+    url: string | null;
+    largeUrl: string | null;
+    // Stable per person, so the placeholder colour is too.
+    colorKey: string;
+    name: string;
+};
+
+const {url, largeUrl, colorKey, name} = Astro.props;
+
+// Placeholder for authors without an archived avatar (pre-archive history, failed
+// downloads, bots): a silhouette on a colour hashed from the author, so people stay
+// distinguishable at a glance.
+function placeholderHue(key: string) {
+    let hash = 0;
+    for (const char of key) {
+        hash = (hash * 31 + char.codePointAt(0)!) | 0;
+    }
+    return Math.abs(hash) % 360;
+}
+---
+
+<style>
+    .avatar {
+        display: block;
+        width: 36px;
+        height: 36px;
+        border: 1px solid black;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    .avatar img, .avatar svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+</style>
+
+{url ? (
+    largeUrl ? (
+        <a class="avatar" href={largeUrl} target="_blank" rel="noopener noreferrer" aria-label={`Profilbilde: ${name}`}>
+            <img src={url} alt="" width="36" height="36" loading="lazy"/>
+        </a>
+    ) : (
+        <span class="avatar"><img src={url} alt="" width="36" height="36" loading="lazy"/></span>
+    )
+) : (
+    <span class="avatar" style={`background: hsl(${placeholderHue(colorKey)} 40% 55%)`} aria-hidden="true">
+        <svg viewBox="0 0 36 36" fill="white">
+            <circle cx="18" cy="14" r="7"/>
+            <path d="M4 36c0-8 6.3-13 14-13s14 5 14 13z"/>
+        </svg>
+    </span>
+)}
