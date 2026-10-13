@@ -1,6 +1,7 @@
 ---
 import {renderMessageText} from "../lib/renderMessageText";
 import {groupMessages} from "../lib/groupMessages";
+import {latestAnchorId} from "../lib/channelUrl";
 import MessageGroup, {type MessageResponse} from "./MessageGroup.astro";
 
 const {channelId} = Astro.props;
@@ -33,8 +34,8 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
         margin: 0;
     }
 
-    /* Messages are chronological, so the channel name and topic stay pinned
-       above them while scrolling back through history. Thicker than
+    /* Messages are chronological and the page opens scrolled to the bottom, like
+       Slack, so the channel name and topic stay pinned above them. Thicker than
        the message borders so the two don't read as the same kind of edge. */
     .banner {
         position: sticky;
@@ -60,6 +61,13 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
        banner's own padding. */
     .channelName:last-child h1 {
         margin-block-end: 0;
+    }
+
+    /* Links to a channel carry #latest (see channelHref). For bare URLs,
+       browsers that support it (Chromium) start at the anchor anyway; others
+       open at the top. */
+    .latest {
+        scroll-initial-target: nearest;
     }
 
     /* Kept to one line so a long topic can't take over the viewport. */
@@ -104,6 +112,7 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
     <div class="list">
         {groupMessages(data.messages).map((group) => <MessageGroup messages={group}/>)}
     </div>
+    <div id={latestAnchorId} class="latest"/>
 </>
     ) : (
 <div class="notFound">
