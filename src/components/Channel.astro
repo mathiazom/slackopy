@@ -18,6 +18,33 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
 ---
 
 <style>
+    /* The page's own gutters replace the body margin, so the banner can span
+       the full width and has no gap above it (it sticks as soon as scrolling
+       starts). Only bundled on pages that render a channel. */
+    :global(body) {
+        margin: 0;
+    }
+
+    .banner, .list, .notFound {
+        padding-inline: 8px;
+    }
+
+    .list {
+        margin: 0;
+    }
+
+    /* Messages are chronological, so the channel name and topic stay pinned
+       above them while scrolling back through history. Thicker than
+       the message borders so the two don't read as the same kind of edge. */
+    .banner {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: white;
+        padding-block: 0.5rem;
+        border-bottom: 3px solid black;
+    }
+
     .channelName {
         container-type: inline-size;
     }
@@ -26,11 +53,23 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
         font-size: min(2em, calc(100cqw / (var(--chars) * 0.55)));
         white-space: nowrap;
         overflow: hidden;
+        margin-block: 0.25em;
     }
 
+    /* Without a topic below it, the name's bottom margin would stack on the
+       banner's own padding. */
+    .channelName:last-child h1 {
+        margin-block-end: 0;
+    }
+
+    /* Kept to one line so a long topic can't take over the viewport. */
     .topic {
-        margin-block: 1em;
         overflow-wrap: anywhere;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+        overflow: hidden;
     }
 
     /* Mentions come from renderMessageText via set:html, so they're outside
@@ -53,17 +92,22 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
     }
 </style>
 
-<a href="/">&larr; kanaler</a>
 {data ? (
 <>
-    <div class="channelName">
-        <h1 style={`--chars: ${data.channel.name.length + 1}`}>#{data.channel.name}</h1>
-    </div>
-    {data.channel.topic && <div class="topic" set:html={renderMessageText(data.channel.topic)}/>}
+    <header class="banner">
+        <a href="/">&larr; kanaler</a>
+        <div class="channelName">
+            <h1 style={`--chars: ${data.channel.name.length + 1}`}>#{data.channel.name}</h1>
+        </div>
+        {data.channel.topic && <div class="topic" set:html={renderMessageText(data.channel.topic)}/>}
+    </header>
     <div class="list">
         {groupMessages(data.messages).map((group) => <MessageGroup messages={group}/>)}
     </div>
 </>
     ) : (
-<p>Channel not found.</p>
+<div class="notFound">
+    <a href="/">&larr; kanaler</a>
+    <p>Channel not found.</p>
+</div>
     )}
