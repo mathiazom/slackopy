@@ -9,6 +9,8 @@ type FileResponse = {
     name: string | null;
     mimetype: string | null;
     url: string;
+    width: number | null;
+    height: number | null;
 };
 
 export type MessageResponse = {
@@ -36,6 +38,18 @@ const author = messages[0];
 
 function renderTimestamp(timestamp: string) {
     return new Date(timestamp).toLocaleString(new Intl.Locale('no'))
+}
+
+// Matches the .image max size. Rendering images at their final size up front
+// means the page has its full height before any image loads, so opening at
+// #latest isn't thrown off by images arriving afterwards.
+const MAX_IMAGE_WIDTH = 480;
+const MAX_IMAGE_HEIGHT = 360;
+
+function imageSize(file: FileResponse) {
+    if (!file.width || !file.height) return {};
+    const scale = Math.min(1, MAX_IMAGE_WIDTH / file.width, MAX_IMAGE_HEIGHT / file.height);
+    return {width: Math.round(file.width * scale), height: Math.round(file.height * scale)};
 }
 ---
 
@@ -78,12 +92,14 @@ function renderTimestamp(timestamp: string) {
     }
 
     /* Capped in both directions, keeping the aspect ratio, so a tall
-       screenshot doesn't take over the channel (Slack caps around the same). */
+       screenshot doesn't take over the channel (Slack caps around the same).
+       Images with known dimensions already get their capped size as
+       width/height attributes (see imageSize); height: auto keeps the ratio
+       when 100% is narrower. Images without get capped from their natural size. */
     .image {
         max-width: min(100%, 480px);
         max-height: 360px;
         height: auto;
-        width: auto;
         border: 1px solid black;
     }
 
@@ -122,7 +138,7 @@ function renderTimestamp(timestamp: string) {
                     <div class="files">
                         {message.files.map((file) => (
                             file.mimetype?.startsWith("image/") ? (
-                                <img src={file.url} alt={file.name ?? ""} class="image"/>
+                                <img src={file.url} alt={file.name ?? ""} class="image" {...imageSize(file)}/>
                             ) : (
                                 <a href={file.url} target="_blank" rel="noopener noreferrer">
                                     {file.name ?? file.id}
