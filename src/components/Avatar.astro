@@ -24,8 +24,10 @@ function placeholderHue(key: string) {
 <style>
     .avatar {
         display: block;
-        width: 36px;
-        height: 36px;
+        /* Set by MessageGroup, which offsets threads by the same column. */
+        box-sizing: border-box;
+        width: var(--avatar-size);
+        height: var(--avatar-size);
         border: 1px solid black;
         overflow: hidden;
         flex-shrink: 0;

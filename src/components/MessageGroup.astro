@@ -55,8 +55,11 @@ function imageSize(file: FileResponse) {
 
 <style>
     .group {
+        /* Avatar column, shared with Avatar.astro and the thread offset below. */
+        --avatar-size: 38px;
+        --avatar-gap: 0.75rem;
         display: flex;
-        gap: 0.75rem;
+        gap: var(--avatar-gap);
         border: 1px solid black;
         margin: 0.5rem 0;
         padding: 1rem;
@@ -119,6 +122,13 @@ function imageSize(file: FileResponse) {
 
     .thread :global(.group) {
         border-left: 0.5rem solid black;
+    }
+
+    /* Replies line up under the parent's avatar instead of its text, so nested
+       threads don't lose a column of width per level. Each reply keeps its own
+       avatar column inside its box. */
+    .thread {
+        margin-inline-start: calc(-1 * (var(--avatar-size) + var(--avatar-gap)));
     }
 </style>
 
