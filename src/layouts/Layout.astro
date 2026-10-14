@@ -1,3 +1,7 @@
+---
+import {Font} from "astro:assets";
+---
+
 <!doctype html>
 <html lang="en">
 	<head>
@@ -10,9 +14,14 @@
 		<link rel="manifest" href="/site.webmanifest" />
 		<meta name="generator" content={Astro.generator} />
 		<title>slackcat</title>
+		<Font cssVariable="--font-lato" />
 		<style is:global>
 			:root {
 				--color-secondary: #616061;
+			}
+
+			body {
+				font-family: var(--font-lato);
 			}
 		</style>
 	</head>
