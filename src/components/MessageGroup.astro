@@ -75,6 +75,15 @@ function imageSize(file: FileResponse) {
         margin: 0;
     }
 
+    .timestamp {
+        color: var(--color-secondary);
+    }
+
+    /* Non-breaking space so the dot never ends a line on its own. */
+    .timestamp::before {
+        content: "·\00a0";
+    }
+
     .message + .message {
         margin-block-start: 1rem;
     }
@@ -137,9 +146,8 @@ function imageSize(file: FileResponse) {
             colorKey={author.authorId ?? author.authorDisplayName} name={author.authorDisplayName}/>
     <div class="content">
         <p class="header">
-            <b title={author.authorRealName}>{author.authorDisplayName}</b> (
-            <time datetime={author.timestamp}>{renderTimestamp(author.timestamp)}</time>
-            )
+            <b title={author.authorRealName}>{author.authorDisplayName}</b>
+            <time class="timestamp" datetime={author.timestamp}>{renderTimestamp(author.timestamp)}</time>
         </p>
         {messages.map((message) => (
             <div class="message">
