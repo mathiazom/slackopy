@@ -16,11 +16,14 @@ type FileResponse = {
 
 type EmbedResponse = {
     kind: "image" | "video" | "audio";
-    // The original, or a browser-friendly copy of it (e.g. JPEG for HEIC).
+    // For large images Slack's thumbnail; otherwise the original, or a
+    // browser-friendly copy of it (e.g. JPEG for HEIC).
     url: string;
     // Dimensions of the image or video, null when unknown (always for audio).
     width: number | null;
     height: number | null;
+    // For video, a still frame to show before it plays.
+    posterUrl: string | null;
 };
 
 export type MessageResponse = {
@@ -52,7 +55,8 @@ function renderTimestamp(timestamp: string) {
 
 // Matches the .media max size. Rendering images and videos at their final size
 // up front means the page has its full height before any of them load, so
-// opening at #latest isn't thrown off by media arriving afterwards.
+// opening at #latest isn't thrown off by media arriving afterwards. It's also
+// what makes lazy-loading images safe.
 const MAX_MEDIA_WIDTH = 480;
 const MAX_MEDIA_HEIGHT = 360;
 
@@ -60,6 +64,11 @@ function mediaSize(embed: EmbedResponse) {
     if (!embed.width || !embed.height) return {};
     const scale = Math.min(1, MAX_MEDIA_WIDTH / embed.width, MAX_MEDIA_HEIGHT / embed.height);
     return {width: Math.round(embed.width * scale), height: Math.round(embed.height * scale)};
+}
+// With a poster nothing of the video needs loading before it plays; without one,
+// its metadata gives the browser a first frame to show (where it can decode it).
+function videoPreview(embed: EmbedResponse) {
+    return embed.posterUrl ? {poster: embed.posterUrl, preload: "none"} : {preload: "metadata"};
 }
 ---
 
@@ -197,13 +206,13 @@ function mediaSize(embed: EmbedResponse) {
                                 case "image":
                                     return (
                                         <a href={file.url} target="_blank" rel="noopener noreferrer" class="image-link">
-                                            <img src={file.embed.url} alt={file.name ?? ""} class="media" {...mediaSize(file.embed)}/>
+                                            <img src={file.embed.url} alt={file.name ?? ""} class="media" loading="lazy" decoding="async" {...mediaSize(file.embed)}/>
                                         </a>
                                     );
                                 case "video":
                                     return (
                                         <div class="player">
-                                            <video src={file.embed.url} controls preload="metadata" class="media" {...mediaSize(file.embed)}/>
+                                            <video src={file.embed.url} controls class="media" {...videoPreview(file.embed)} {...mediaSize(file.embed)}/>
                                             {link}
                                         </div>
                                     );
