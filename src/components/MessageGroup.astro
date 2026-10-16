@@ -10,10 +10,15 @@ type FileResponse = {
     mimetype: string | null;
     // The archived original.
     url: string;
-    // What to show inline (the original, or a browser-friendly copy of it, e.g.
-    // JPEG for HEIC); null when the file is only linked.
-    imageUrl: string | null;
-    // Dimensions of imageUrl's image.
+    // How to show the file inline; null when it's only linked.
+    embed: EmbedResponse | null;
+};
+
+type EmbedResponse = {
+    kind: "image" | "video" | "audio";
+    // The original, or a browser-friendly copy of it (e.g. JPEG for HEIC).
+    url: string;
+    // Dimensions of the image or video, null when unknown (always for audio).
     width: number | null;
     height: number | null;
 };
@@ -45,16 +50,16 @@ function renderTimestamp(timestamp: string) {
     return new Date(timestamp).toLocaleString(new Intl.Locale('no'))
 }
 
-// Matches the .image max size. Rendering images at their final size up front
-// means the page has its full height before any image loads, so opening at
-// #latest isn't thrown off by images arriving afterwards.
-const MAX_IMAGE_WIDTH = 480;
-const MAX_IMAGE_HEIGHT = 360;
+// Matches the .media max size. Rendering images and videos at their final size
+// up front means the page has its full height before any of them load, so
+// opening at #latest isn't thrown off by media arriving afterwards.
+const MAX_MEDIA_WIDTH = 480;
+const MAX_MEDIA_HEIGHT = 360;
 
-function imageSize(file: FileResponse) {
-    if (!file.width || !file.height) return {};
-    const scale = Math.min(1, MAX_IMAGE_WIDTH / file.width, MAX_IMAGE_HEIGHT / file.height);
-    return {width: Math.round(file.width * scale), height: Math.round(file.height * scale)};
+function mediaSize(embed: EmbedResponse) {
+    if (!embed.width || !embed.height) return {};
+    const scale = Math.min(1, MAX_MEDIA_WIDTH / embed.width, MAX_MEDIA_HEIGHT / embed.height);
+    return {width: Math.round(embed.width * scale), height: Math.round(embed.height * scale)};
 }
 ---
 
@@ -108,11 +113,6 @@ function imageSize(file: FileResponse) {
         gap: 1rem;
     }
 
-    /* Capped in both directions, keeping the aspect ratio, so a tall
-       screenshot doesn't take over the channel (Slack caps around the same).
-       Images with known dimensions already get their capped size as
-       width/height attributes (see imageSize); height: auto keeps the ratio
-       when 100% is narrower. Images without get capped from their natural size. */
     /* Opens the original, which for a converted image (e.g. HEIC) is the file
        as uploaded rather than the copy shown. */
     .image-link {
@@ -121,11 +121,31 @@ function imageSize(file: FileResponse) {
         line-height: 0;
     }
 
-    .image {
+    /* Capped in both directions, keeping the aspect ratio, so a tall
+       screenshot or portrait video doesn't take over the channel (Slack caps
+       around the same). Media with known dimensions already get their capped
+       size as width/height attributes (see mediaSize); height: auto keeps the
+       ratio when 100% is narrower. Media without get capped from their
+       natural size. */
+    .media {
         max-width: min(100%, 480px);
         max-height: 360px;
         height: auto;
         border: 1px solid black;
+    }
+
+    /* A player with its file link underneath. The link is the fallback where
+       the browser can't play the file (e.g. HEVC video in Firefox), since
+       there's no JavaScript to detect that. */
+    .player {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        max-width: 100%;
+    }
+
+    .audio {
+        max-width: 100%;
     }
 
     .thread__header {
@@ -167,17 +187,37 @@ function imageSize(file: FileResponse) {
                 {message.text && <div class="text" set:html={renderMessageText(message.text)}/>}
                 {message.files.length > 0 && (
                     <div class="files">
-                        {message.files.map((file) => (
-                            file.imageUrl ? (
-                                <a href={file.url} target="_blank" rel="noopener noreferrer" class="image-link">
-                                    <img src={file.imageUrl} alt={file.name ?? ""} class="image" {...imageSize(file)}/>
-                                </a>
-                            ) : (
+                        {message.files.map((file) => {
+                            const link = (
                                 <a href={file.url} target="_blank" rel="noopener noreferrer">
                                     {file.name ?? file.id}
                                 </a>
-                            )
-                        ))}
+                            );
+                            switch (file.embed?.kind) {
+                                case "image":
+                                    return (
+                                        <a href={file.url} target="_blank" rel="noopener noreferrer" class="image-link">
+                                            <img src={file.embed.url} alt={file.name ?? ""} class="media" {...mediaSize(file.embed)}/>
+                                        </a>
+                                    );
+                                case "video":
+                                    return (
+                                        <div class="player">
+                                            <video src={file.embed.url} controls preload="metadata" class="media" {...mediaSize(file.embed)}/>
+                                            {link}
+                                        </div>
+                                    );
+                                case "audio":
+                                    return (
+                                        <div class="player">
+                                            <audio src={file.embed.url} controls preload="metadata" class="audio"/>
+                                            {link}
+                                        </div>
+                                    );
+                                default:
+                                    return link;
+                            }
+                        })}
                     </div>
                 )}
                 <Reactions messageId={message.id} reactions={message.reactions}/>
