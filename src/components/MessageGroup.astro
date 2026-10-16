@@ -8,7 +8,12 @@ type FileResponse = {
     id: string;
     name: string | null;
     mimetype: string | null;
+    // The archived original.
     url: string;
+    // What to show inline (the original, or a browser-friendly copy of it, e.g.
+    // JPEG for HEIC); null when the file is only linked.
+    imageUrl: string | null;
+    // Dimensions of imageUrl's image.
     width: number | null;
     height: number | null;
 };
@@ -108,6 +113,14 @@ function imageSize(file: FileResponse) {
        Images with known dimensions already get their capped size as
        width/height attributes (see imageSize); height: auto keeps the ratio
        when 100% is narrower. Images without get capped from their natural size. */
+    /* Opens the original, which for a converted image (e.g. HEIC) is the file
+       as uploaded rather than the copy shown. */
+    .image-link {
+        display: block;
+        max-width: 100%;
+        line-height: 0;
+    }
+
     .image {
         max-width: min(100%, 480px);
         max-height: 360px;
@@ -155,8 +168,10 @@ function imageSize(file: FileResponse) {
                 {message.files.length > 0 && (
                     <div class="files">
                         {message.files.map((file) => (
-                            file.mimetype?.startsWith("image/") ? (
-                                <img src={file.url} alt={file.name ?? ""} class="image" {...imageSize(file)}/>
+                            file.imageUrl ? (
+                                <a href={file.url} target="_blank" rel="noopener noreferrer" class="image-link">
+                                    <img src={file.imageUrl} alt={file.name ?? ""} class="image" {...imageSize(file)}/>
+                                </a>
                             ) : (
                                 <a href={file.url} target="_blank" rel="noopener noreferrer">
                                     {file.name ?? file.id}
