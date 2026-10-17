@@ -15,7 +15,10 @@ type ChannelResponse = {
     messages: MessageResponse[];
 };
 
-const data = response.ok ? (await response.json() as ChannelResponse) : null;
+if (!response.ok) {
+    throw new Error(`Fetching channel ${channelId} failed: ${response.status}`);
+}
+const data = await response.json() as ChannelResponse;
 ---
 
 <style>
@@ -26,7 +29,7 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
         margin: 0;
     }
 
-    .banner, .list, .notFound {
+    .banner, .list {
         padding-inline: 8px;
     }
 
@@ -100,23 +103,14 @@ const data = response.ok ? (await response.json() as ChannelResponse) : null;
     }
 </style>
 
-{data ? (
-<>
-    <header class="banner">
-        <a href="/">&larr; kanaler</a>
-        <div class="channelName">
-            <h1 style={`--chars: ${data.channel.name.length + 1}`}>#{data.channel.name}</h1>
-        </div>
-        {data.channel.topic && <div class="topic" set:html={renderMessageText(data.channel.topic)}/>}
-    </header>
-    <div class="list">
-        {groupMessages(data.messages).map((group) => <MessageGroup messages={group}/>)}
-    </div>
-    <div id={latestAnchorId} class="latest"/>
-</>
-    ) : (
-<div class="notFound">
+<header class="banner">
     <a href="/">&larr; kanaler</a>
-    <p>Channel not found.</p>
+    <div class="channelName">
+        <h1 style={`--chars: ${data.channel.name.length + 1}`}>#{data.channel.name}</h1>
+    </div>
+    {data.channel.topic && <div class="topic" set:html={renderMessageText(data.channel.topic)}/>}
+</header>
+<div class="list">
+    {groupMessages(data.messages).map((group) => <MessageGroup messages={group}/>)}
 </div>
-    )}
+<div id={latestAnchorId} class="latest"/>

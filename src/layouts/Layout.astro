@@ -11,7 +11,9 @@ import {Font} from "astro:assets";
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="shortcut icon" href="/favicon.ico" />
 		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-		<link rel="manifest" href="/site.webmanifest" />
+		<!-- Every path is behind the auth gate, and browsers fetch the manifest
+		     without cookies unless told otherwise. -->
+		<link rel="manifest" href="/site.webmanifest" crossorigin="use-credentials" />
 		<meta name="generator" content={Astro.generator} />
 		<title>slackcat</title>
 		<Font cssVariable="--font-lato" />

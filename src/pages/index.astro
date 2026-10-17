@@ -1,19 +1,7 @@
 ---
-import { getSession } from 'auth-astro/server';
 import Channels from "../components/Channels.astro";
 import Layout from "../layouts/Layout.astro";
-import Login from "../components/Login/Login.astro";
-
-export const prerender = false;
-
-const session = await getSession(Astro.request);
 ---
 <Layout>
-	{
-		session ? (
-			<Channels />
-		) : (
-			<Login />
-		)
-	}
+	<Channels />
 </Layout>

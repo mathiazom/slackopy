@@ -1,0 +1,18 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Channel from "../../components/Channel.astro";
+
+export async function getStaticPaths() {
+	const response = await fetch(`${process.env.BACKEND_URL}/channels`);
+	if (!response.ok) {
+		throw new Error(`Fetching channels failed: ${response.status}`);
+	}
+	const data = await response.json() as {channels: {id: string}[]};
+	return data.channels.map((channel) => ({params: {id: channel.id}}));
+}
+
+const {id} = Astro.params;
+---
+<Layout>
+	<Channel channelId={id} />
+</Layout>

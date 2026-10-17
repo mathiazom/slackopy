@@ -129,7 +129,7 @@ function renderInline(text: string): string {
 		} else if (userName !== undefined) {
 			html += `<span class="mention">@${renderPlain(userName)}</span>`;
 		} else if (channelId !== undefined) {
-			html += `<a class="mention" href="${escapeHtml(channelHref(channelId, decodeSlackEntities(channelName)))}">#${renderPlain(channelName)}</a>`;
+			html += `<a class="mention" href="${escapeHtml(channelHref(channelId))}">#${renderPlain(channelName)}</a>`;
 		} else if (specialMention !== undefined) {
 			html += `<span class="mention mention--special">@${specialMention}</span>`;
 		} else if (shortcode !== undefined) {

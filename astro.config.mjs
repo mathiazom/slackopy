@@ -1,20 +1,23 @@
 // @ts-check
 import {defineConfig, fontProviders} from 'astro/config';
 
-import auth from 'auth-astro';
-
-import node from '@astrojs/node';
-
 // https://astro.build/config
 export default defineConfig({
-    integrations: [auth()],
-
-    adapter: node({
-        mode: 'standalone'
-    }),
-
     server: {
         allowedHosts: process.env.ALLOWED_HOSTS ? process.env.ALLOWED_HOSTS.split(',') : undefined
+    },
+
+    // File URLs are relative ("/files/<fid>"), served by the auth gate in front
+    // of the site. The dev server stands in for it, against local SeaweedFS.
+    vite: {
+        server: {
+            proxy: {
+                '/files': {
+                    target: 'http://localhost:8080',
+                    rewrite: (path) => path.replace(/^\/files/, ''),
+                },
+            },
+        },
     },
 
     // Downloaded from Fontsource at build time and served from our own origin,
