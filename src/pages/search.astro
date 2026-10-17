@@ -46,6 +46,9 @@ import Layout from "../layouts/Layout.astro";
 			padding: 0;
 		}
 	</style>
+	<!-- First, so the UI's language (from <html lang>) is set before the other
+	     components render; otherwise they keep their English fallback texts. -->
+	<pagefind-config></pagefind-config>
 	<div class="search">
 		<a href="/">&larr; kanaler</a>
 		<pagefind-input autofocus></pagefind-input>
