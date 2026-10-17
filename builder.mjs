@@ -10,19 +10,26 @@ const BUILDS_DIR = path.join(SITE_DIR, "builds");
 const REBUILD_HOUR_UTC = 5;
 const RETRY_MS = 5 * 60 * 1000;
 
-function astroBuild(outDir) {
+function run(bin, args) {
     return new Promise((resolve) => {
-        spawn("node_modules/.bin/astro", ["build", "--outDir", outDir], {stdio: "inherit"})
+        spawn(path.join("node_modules/.bin", bin), args, {stdio: "inherit"})
             .on("exit", (code) => resolve(code === 0))
             .on("error", () => resolve(false));
     });
+}
+
+// The search index is part of the build, so it is switched in together with the
+// pages it indexes.
+async function buildSite(outDir) {
+    return await run("astro", ["build", "--outDir", outDir])
+        && await run("pagefind", ["--site", outDir]);
 }
 
 async function build() {
     const name = new Date().toISOString().replace(/[:.]/g, "-");
     const outDir = path.join(BUILDS_DIR, name);
     await mkdir(BUILDS_DIR, {recursive: true});
-    if (!(await astroBuild(outDir))) {
+    if (!(await buildSite(outDir))) {
         await rm(outDir, {recursive: true, force: true});
         return false;
     }

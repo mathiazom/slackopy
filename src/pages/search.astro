@@ -1,0 +1,146 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+<Layout>
+	<!-- Written by pagefind after the build, so not bundled by Astro. In dev it is
+	     the copy in public/ from the last `pnpm build`. -->
+	<link href="/pagefind/pagefind-component-ui.css" rel="stylesheet" />
+	<!-- Spaced by gap rather than margins, which Pagefind resets on its own
+	     elements. Results keep Pagefind's tighter spacing between them. -->
+	<style>
+		.search {
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+			--pf-font: var(--font-lato);
+		}
+
+		/* The site's look, through Pagefind's own variables: a plain black box. Only
+		   on the input, since the result chips hardcode their rounded corners. Kept
+		   in step with the search box on the channel list. */
+		pagefind-input {
+			--pf-text: black;
+			--pf-text-muted: var(--color-secondary);
+			--pf-border: black;
+			--pf-border-radius: 0;
+			--pf-outline-focus: black;
+		}
+	</style>
+	<!-- Global, since results are created by script and so lack Astro's scoping
+	     attributes. Own classes rather than Pagefind's, whose rules win on
+	     specificity. The channel is a quiet label over its groups, which line up
+	     under it instead of being indented. -->
+	<style is:global>
+		.pf-result .channel {
+			font-size: 0.875rem;
+			color: var(--color-secondary);
+			margin: 0;
+		}
+
+		.pf-result .groups {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+	</style>
+	<div class="search">
+		<a href="/">&larr; kanaler</a>
+		<pagefind-input autofocus></pagefind-input>
+		<pagefind-summary></pagefind-summary>
+		<pagefind-results></pagefind-results>
+	</div>
+	<script is:inline src="/pagefind/pagefind-component-ui.js"></script>
+	<script is:inline>
+		function text(html) {
+			const element = document.createElement("div");
+			element.innerHTML = html;
+			return element.textContent.trim();
+		}
+
+		function escapeHtml(s) {
+			const element = document.createElement("div");
+			element.textContent = s;
+			return element.innerHTML;
+		}
+
+		// A group's excerpt usually starts with its heading (author and time), which
+		// is already shown as the title.
+		function withoutHeading(excerpt, title) {
+			const heading = `${escapeHtml(title)} `;
+			return excerpt.startsWith(heading) ? excerpt.slice(heading.length) : excerpt;
+		}
+
+		// Pagefind links a group as #<header id>. The channel page highlights and
+		// scrolls to the match itself (see Channel.astro), so that becomes ?group=,
+		// with the matched word in ?hl=: the marked word from the excerpt, not the
+		// query, since stemming can match another form of it.
+		function groupHref(url, excerpt) {
+			const href = new URL(url, location.origin);
+			href.searchParams.set("group", href.hash.slice(1));
+			href.hash = "";
+			const match = excerpt.match(/<mark>(.*?)<\/mark>/s);
+			if (match) href.searchParams.set("hl", text(match[1]));
+			return href.pathname + href.search;
+		}
+
+		// Like Pagefind's default: the groups with the most matched words, kept in
+		// page order. A first sub-result at the page's own URL holds text before any
+		// heading, which a channel page doesn't have.
+		const MAX_SUB_RESULTS = 3;
+		function subResults(result) {
+			const all = result.sub_results.filter((sub) => sub.url !== result.url);
+			const best = new Set([...all]
+				.sort((a, b) => b.locations.length - a.locations.length)
+				.slice(0, MAX_SUB_RESULTS));
+			return all.filter((sub) => best.has(sub));
+		}
+
+		// The component UI has no hook for changing a result's URLs, so this replaces
+		// its default result markup (same classes, so its styles still apply). Each
+		// channel's name labels its best message groups.
+		document.querySelector("pagefind-results").resultTemplate = (result) => {
+			const item = document.createElement("li");
+			item.className = "pf-result";
+			item.innerHTML = `<h2 class="channel"></h2><ul class="groups"></ul>`;
+			// Only a heading, not a link or a card: the channel itself is a click away
+			// from any of its groups, and as a link it would be an extra stop when
+			// arrowing through results.
+			item.querySelector(".channel").textContent = result.meta.title;
+			const groups = item.querySelector(".groups");
+			for (const sub of subResults(result)) {
+				const group = document.createElement("li");
+				group.className = "pf-heading-chip";
+				group.innerHTML = `<a class="pf-heading-link"></a><p class="pf-heading-excerpt"></p>`;
+				const excerpt = withoutHeading(sub.excerpt, sub.title);
+				const link = group.querySelector(".pf-heading-link");
+				link.href = groupHref(sub.url, excerpt);
+				link.textContent = sub.title;
+				// Pagefind's excerpts are already escaped HTML, with matches in <mark>.
+				group.querySelector(".pf-heading-excerpt").innerHTML = excerpt;
+				groups.append(group);
+			}
+			return item;
+		};
+
+		// The query lives in ?q= so a search can be shared or reloaded. Replaced, not
+		// pushed, so typing doesn't fill the back history. Every search goes through
+		// the instance, including clearing it, so the URL never goes stale.
+		const instance = PagefindComponents.getInstanceManager().getInstance("default");
+		instance.on("search", (term) => {
+			const url = new URL(location.href);
+			term ? url.searchParams.set("q", term) : url.searchParams.delete("q");
+			history.replaceState(null, "", url);
+		});
+		const query = new URLSearchParams(location.search).get("q");
+		if (query) {
+			// Through the input, so it shows the query and its clear button, and
+			// searches the same way as typing.
+			const input = document.querySelector("pagefind-input input");
+			input.value = query;
+			input.dispatchEvent(new Event("input", {bubbles: true}));
+		}
+	</script>
+</Layout>

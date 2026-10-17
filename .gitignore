@@ -1,6 +1,9 @@
 # build output
 dist/
 
+# search index from the last build, copied so search works in dev
+public/pagefind/
+
 # generated types
 .astro/
 

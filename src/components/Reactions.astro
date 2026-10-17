@@ -1,5 +1,6 @@
 ---
 import {emojify} from "slackmoji";
+import {idSafe} from "../lib/channelUrl";
 
 export type ReactionResponse = {
     name: string;
@@ -12,7 +13,7 @@ const {messageId, reactions} = Astro.props as { messageId: string; reactions: Re
 
 // Message ids are Slack timestamps ("1712345678.123456"), and a "." isn't valid
 // in the dashed ident that anchor-name needs, so the id is sanitized for both.
-const idPrefix = `reaction-${messageId.replace(/[^a-zA-Z0-9-]/g, "-")}`;
+const idPrefix = `reaction-${idSafe(messageId)}`;
 ---
 
 <style>
@@ -93,8 +94,11 @@ const idPrefix = `reaction-${messageId.replace(/[^a-zA-Z0-9-]/g, "-")}`;
     }
 </style>
 
+{/* Out of the search index: popover text is hidden, so excerpts couldn't show it
+    and search hits couldn't be highlighted in it. Rendered once per message, so not
+    an HTML comment. */}
 {reactions.length > 0 && (
-        <ul class="reactions">
+        <ul class="reactions" data-pagefind-ignore>
             {reactions.map((reaction, index) => {
                 const id = `${idPrefix}-${index}`;
                 const emoji = reaction.imageUrl ? (

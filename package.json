@@ -4,12 +4,13 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "env $(cat .env | xargs) astro dev",
-    "build": "astro build",
+    "build": "rm -rf public/pagefind && astro build && pagefind --site dist && cp -r dist/pagefind public/pagefind",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
     "astro": "^5.10.1",
+    "pagefind": "^1.5.2",
     "slackmoji": "^1.1.0"
   }
 }

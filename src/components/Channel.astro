@@ -29,6 +29,12 @@ const data = await response.json() as ChannelResponse;
         margin: 0;
     }
 
+    /* A search hit's matched word (see the script below), in <mark>'s colors. */
+    :global(::highlight(search)) {
+        background-color: Mark;
+        color: MarkText;
+    }
+
     .banner, .list {
         padding-inline: 8px;
     }
@@ -110,7 +116,60 @@ const data = await response.json() as ChannelResponse;
     </div>
     {data.channel.topic && <div class="topic" set:html={renderMessageText(data.channel.topic)}/>}
 </header>
-<div class="list">
+<div class="list" data-pagefind-body>
     {groupMessages(data.messages).map((group) => <MessageGroup messages={group}/>)}
 </div>
 <div id={latestAnchorId} class="latest"/>
+
+<script>
+    // Search hits link here with the message group's header id in ?group= and
+    // the matched word in ?hl= (see search.astro). Query parameters rather than a
+    // #fragment or text fragment, so the browser doesn't jump on its own:
+    // Firefox lands those unreliably on long pages, so this is the only scroll.
+    const params = new URLSearchParams(location.search);
+    const header = document.getElementById(params.get("group") ?? "");
+    const word = params.get("hl");
+    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    // Going back or forward restores where the reader was instead.
+    if (header && navigation?.type !== "back_forward") {
+        for (let details = header.closest("details"); details; details = details.parentElement!.closest("details")) {
+            details.open = true;
+        }
+        const range = word ? findWord(header.closest(".group")!, word) : null;
+        if (range && "highlights" in CSS) {
+            CSS.highlights.set("search", new Highlight(range));
+        }
+        const target = range?.startContainer.parentElement ?? header;
+        // Once the font and layout have settled, so the position holds.
+        const loaded = document.readyState === "complete"
+            ? Promise.resolve()
+            : new Promise((resolve) => addEventListener("load", resolve, {once: true}));
+        Promise.all([loaded, document.fonts.ready]).then(() => {
+            target.scrollIntoView({block: "center"});
+        });
+    }
+
+    // The word is the page's own text from the search index, so an exact match;
+    // failing that, without surrounding punctuation, which the index keeps
+    // attached but the page may split into another element (e.g. after a mention).
+    function findWord(root: Element, word: string): Range | null {
+        for (const needle of [word, word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "")]) {
+            if (!needle) continue;
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+                // Not in reactions, whose popover text is hidden (and not indexed).
+                acceptNode: (node) => node.parentElement?.closest("[data-pagefind-ignore]")
+                    ? NodeFilter.FILTER_REJECT
+                    : NodeFilter.FILTER_ACCEPT,
+            });
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                const index = (node as Text).data.indexOf(needle);
+                if (index === -1) continue;
+                const range = document.createRange();
+                range.setStart(node, index);
+                range.setEnd(node, index + needle.length);
+                return range;
+            }
+        }
+        return null;
+    }
+</script>

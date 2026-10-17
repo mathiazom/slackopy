@@ -1,6 +1,7 @@
 ---
 import {renderMessageText} from "../lib/renderMessageText";
 import {groupMessages} from "../lib/groupMessages";
+import {idSafe} from "../lib/channelUrl";
 import Avatar from "./Avatar.astro";
 import Reactions, {type ReactionResponse} from "./Reactions.astro";
 
@@ -44,10 +45,17 @@ export type MessageResponse = {
 type Props = {
     // Consecutive messages from one author identity, chronological (see groupMessages).
     messages: MessageResponse[];
+    inThread?: boolean;
 };
 
-const {messages} = Astro.props;
+const {messages, inThread = false} = Astro.props;
 const author = messages[0];
+
+// The header is a heading with an id so search can link to the group: Pagefind
+// splits a channel into one sub-result per heading. Replies nest under the
+// channel's h1 one level deeper than top-level messages.
+const Header = inThread ? "h3" : "h2";
+const headerId = `message-${idSafe(author.id)}`;
 
 function renderTimestamp(timestamp: string) {
     return new Date(timestamp).toLocaleString(new Intl.Locale('no'))
@@ -92,6 +100,8 @@ function videoPreview(embed: EmbedResponse) {
 
     .header {
         margin: 0;
+        font-size: inherit;
+        font-weight: inherit;
     }
 
     .timestamp {
@@ -187,10 +197,10 @@ function videoPreview(embed: EmbedResponse) {
     <Avatar url={author.authorAvatarUrl} largeUrl={author.authorAvatarLargeUrl}
             colorKey={author.authorId ?? author.authorDisplayName} name={author.authorDisplayName}/>
     <div class="content">
-        <p class="header">
+        <Header class="header" id={headerId}>
             <b title={author.authorRealName}>{author.authorDisplayName}</b>
             <time class="timestamp" datetime={author.timestamp}>{renderTimestamp(author.timestamp)}</time>
-        </p>
+        </Header>
         {messages.map((message) => (
             <div class="message">
                 {message.text && <div class="text" set:html={renderMessageText(message.text)}/>}
@@ -237,7 +247,7 @@ function videoPreview(embed: EmbedResponse) {
                         </summary>
                         <div class="thread">
                             {groupMessages(message.replies).map((group) => (
-                                <Astro.self messages={group}/>
+                                <Astro.self messages={group} inThread/>
                             ))}
                         </div>
                     </details>
