@@ -1,7 +1,7 @@
 FROM node:lts
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@9 --activate
+RUN npm install -g corepack && corepack enable
 
 COPY . .
 RUN pnpm install --frozen-lockfile
