@@ -17,7 +17,6 @@ if (!statsResponse.ok) {
 const stats = await statsResponse.json() as {
 	messageCount: number,
 	firstMessage: string | null,
-	lastMessage: string | null,
 };
 
 // Set by the image build, absent in dev.
@@ -46,12 +45,12 @@ function renderDate(timestamp: string) {
 		<li><a href={channelHref(channel.id)}>#{channel.name}</a></li>
 	))}
 </ul>
-<footer style="padding: 1rem; color: var(--color-secondary); font-size: 0.875rem;">
+<footer style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem; color: var(--color-secondary); font-size: 0.875rem;">
 	<p style="margin: 0;">
-		{stats.messageCount.toLocaleString(new Intl.Locale('no'))} meldinger i {channels.length} kanaler{stats.firstMessage && stats.lastMessage && `, fra ${renderDate(stats.firstMessage)} til ${renderDate(stats.lastMessage)}`}
+		{stats.messageCount.toLocaleString(new Intl.Locale('no'))} meldinger i {channels.length} kanaler{stats.firstMessage && <> siden <span style="white-space: nowrap;">{renderDate(stats.firstMessage)}</span></>}
 	</p>
 	<p style="margin: 0;">
-		Sist bygget {new Date().toLocaleString(new Intl.Locale('no'), {dateStyle: "medium", timeStyle: "short"})}
-		{commit && <> · slackopy <a href={`https://github.com/mathiazom/slackopy/commit/${commit}`} style="color: inherit;">{commit.slice(0, 7)}</a></>}
+		oppdatert <span style="white-space: nowrap;">{new Date().toLocaleString(new Intl.Locale('no'), {dateStyle: "medium", timeStyle: "short"})}</span>
 	</p>
+		{commit && <p style="margin: 0;">slackopy <a href={`https://github.com/mathiazom/slackopy/commit/${commit}`} style="color: inherit;">{commit.slice(0, 7)}</a></p>}
 </footer>
