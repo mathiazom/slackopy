@@ -1,0 +1,65 @@
+---
+import Avatar from "./Avatar.astro";
+import {profileHref, profilePopoverId} from "../lib/userProfile";
+import "../styles/popover.css";
+
+// A short profile, linking to the full one on its own page.
+export type UserResponse = {
+    id: string;
+    profileId: number;
+    displayName: string;
+    realName: string;
+    title: string | null;
+    // The profile's own avatar, 512px.
+    avatarUrl: string | null;
+};
+
+const {user} = Astro.props as { user: UserResponse };
+---
+
+<style>
+    .profile {
+        --avatar-size: 72px;
+        gap: 0.75rem;
+    }
+
+    /* Next to its button; as a bottom sheet it spans the viewport. */
+    @supports (anchor-name: --a) {
+        .profile {
+            max-width: min(20rem, calc(100vw - 2rem));
+        }
+    }
+
+    /* display would override the closed popover's display: none. */
+    .profile:popover-open {
+        display: flex;
+    }
+
+    .profile__name {
+        margin: 0;
+        font-size: inherit;
+    }
+
+    .profile__details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .profile__secondary {
+        color: var(--color-secondary);
+    }
+</style>
+
+{/* Out of the search index, like reactions: popover text is hidden. */}
+<div class="popover profile" id={profilePopoverId(user.profileId)} popover data-pagefind-ignore>
+    <Avatar url={user.avatarUrl} colorKey={user.id} name={user.displayName} size={72}/>
+    <div class="profile__details">
+        <p class="profile__name"><b>{user.displayName}</b></p>
+        {user.realName !== user.displayName && <span class="profile__secondary">{user.realName}</span>}
+        {user.title && <span>{user.title}</span>}
+        <a href={profileHref(user.id, user.profileId)}>Vis profil</a>
+    </div>
+</div>

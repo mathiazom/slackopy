@@ -1,15 +1,20 @@
 ---
 type Props = {
     url: string | null;
-    largeUrl: string | null;
     // Stable per person, so the placeholder colour is too.
     colorKey: string;
     name: string;
+    // Rendered size in px, for the image's width/height. The box itself is
+    // var(--avatar-size), set by whoever places it.
+    size?: number;
+    // A profile popover to open (see profilePopoverId), or a link to follow.
+    popoverTarget?: string;
+    href?: string;
 };
 
-const {url, largeUrl, colorKey, name} = Astro.props;
+const {url, colorKey, name, size = 36, popoverTarget, href} = Astro.props;
 
-// Placeholder for authors without an archived avatar (pre-archive history, failed
+// Placeholder for people without an archived avatar (pre-archive history, failed
 // downloads, bots): a silhouette on a colour hashed from the author, so people stay
 // distinguishable at a glance.
 function placeholderHue(key: string) {
@@ -31,6 +36,12 @@ function placeholderHue(key: string) {
         border: 1px solid black;
         overflow: hidden;
         flex-shrink: 0;
+        padding: 0;
+        background: none;
+    }
+
+    button.avatar {
+        cursor: pointer;
     }
 
     .avatar img, .avatar svg {
@@ -41,19 +52,21 @@ function placeholderHue(key: string) {
     }
 </style>
 
-{url ? (
-    largeUrl ? (
-        <a class="avatar" href={largeUrl} target="_blank" rel="noopener noreferrer" aria-label={`Profilbilde: ${name}`}>
-            <img src={url} alt="" width="36" height="36" loading="lazy"/>
-        </a>
+{(() => {
+    const image = url ? (
+        <img src={url} alt="" width={size} height={size} loading="lazy"/>
     ) : (
-        <span class="avatar"><img src={url} alt="" width="36" height="36" loading="lazy"/></span>
-    )
-) : (
-    <span class="avatar" style={`background: hsl(${placeholderHue(colorKey)} 40% 55%)`} aria-hidden="true">
         <svg viewBox="0 0 36 36" fill="white">
             <circle cx="18" cy="14" r="7"/>
             <path d="M4 36c0-8 6.3-13 14-13s14 5 14 13z"/>
         </svg>
-    </span>
-)}
+    );
+    const style = url ? undefined : `background: hsl(${placeholderHue(colorKey)} 40% 55%)`;
+    if (popoverTarget) {
+        return <button type="button" class="avatar" style={style} popovertarget={popoverTarget} aria-label={`Profil: ${name}`}>{image}</button>;
+    }
+    if (href && url) {
+        return <a class="avatar" href={href} target="_blank" rel="noopener noreferrer" aria-label={`Profilbilde: ${name}`}>{image}</a>;
+    }
+    return <span class="avatar" style={style} aria-hidden="true">{image}</span>;
+})()}

@@ -3,6 +3,7 @@ import {renderMessageText} from "../lib/renderMessageText";
 import {groupMessages} from "../lib/groupMessages";
 import {latestAnchorId} from "../lib/channelUrl";
 import MessageGroup, {type MessageResponse} from "./MessageGroup.astro";
+import ProfilePopover, {type UserResponse} from "./ProfilePopover.astro";
 
 const {channelId} = Astro.props;
 
@@ -13,6 +14,8 @@ const response = await fetch(`${backendUrl}/channels/${channelId}`);
 type ChannelResponse = {
     channel: { id: string; name: string; topic: string | null };
     messages: MessageResponse[];
+    // By profile id: everyone shown with a profile on the page.
+    users: Record<string, UserResponse>;
 };
 
 if (!response.ok) {
@@ -99,7 +102,15 @@ const data = await response.json() as ChannelResponse;
         text-decoration: none;
     }
 
-    :global(a.mention:hover) {
+    /* User mentions open a profile popover. */
+    :global(button.mention) {
+        padding-block: 0;
+        border: 0;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    :global(a.mention:hover), :global(button.mention:hover) {
         background: rgba(29, 155, 209, 0.2);
     }
 
@@ -120,6 +131,7 @@ const data = await response.json() as ChannelResponse;
     {groupMessages(data.messages).map((group) => <MessageGroup messages={group}/>)}
 </div>
 <div id={latestAnchorId} class="latest"/>
+{Object.values(data.users).map((user) => <ProfilePopover user={user}/>)}
 
 <script>
     // Search hits link here with the message group's header id in ?group= and

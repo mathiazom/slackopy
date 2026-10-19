@@ -2,6 +2,7 @@
 import {renderMessageText} from "../lib/renderMessageText";
 import {groupMessages} from "../lib/groupMessages";
 import {idSafe} from "../lib/channelUrl";
+import {profilePopoverId} from "../lib/userProfile";
 import Avatar from "./Avatar.astro";
 import Reactions, {type ReactionResponse} from "./Reactions.astro";
 
@@ -33,9 +34,9 @@ export type MessageResponse = {
     authorDisplayName: string;
     authorRealName: string;
     authorId: string | null;
-    authorSnapshotId: number | null;
+    // Also keys the author's profile in the channel's users.
+    authorProfileId: number | null;
     authorAvatarUrl: string | null;
-    authorAvatarLargeUrl: string | null;
     timestamp: string;
     files: FileResponse[];
     reactions: ReactionResponse[];
@@ -56,6 +57,10 @@ const author = messages[0];
 // channel's h1 one level deeper than top-level messages.
 const Header = inThread ? "h3" : "h2";
 const headerId = `message-${idSafe(author.id)}`;
+// Bot/system messages without a user have no profile.
+const profilePopover = author.authorId !== null && author.authorProfileId !== null
+    ? profilePopoverId(author.authorProfileId)
+    : undefined;
 
 function renderTimestamp(timestamp: string) {
     return new Date(timestamp).toLocaleString(new Intl.Locale('no'))
@@ -132,6 +137,20 @@ function videoPreview(embed: EmbedResponse) {
         margin: 0;
         font-size: inherit;
         font-weight: inherit;
+    }
+
+    .author {
+        padding: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        font-weight: bold;
+        color: inherit;
+        cursor: pointer;
+    }
+
+    .author:hover {
+        text-decoration: underline;
     }
 
     .timestamp {
@@ -315,11 +334,15 @@ function videoPreview(embed: EmbedResponse) {
 </style>
 
 <div class="group">
-    <Avatar url={author.authorAvatarUrl} largeUrl={author.authorAvatarLargeUrl}
-            colorKey={author.authorId ?? author.authorDisplayName} name={author.authorDisplayName}/>
+    <Avatar url={author.authorAvatarUrl} colorKey={author.authorId ?? author.authorDisplayName}
+            name={author.authorDisplayName} popoverTarget={profilePopover}/>
     <div class="content">
         <Header class="header" id={headerId}>
-            <b title={author.authorRealName}>{author.authorDisplayName}</b>
+            {profilePopover ? (
+                <button type="button" class="author" title={author.authorRealName} popovertarget={profilePopover}>{author.authorDisplayName}</button>
+            ) : (
+                <b title={author.authorRealName}>{author.authorDisplayName}</b>
+            )}
             <time class="timestamp" datetime={author.timestamp}>{renderTimestamp(author.timestamp)}</time>
         </Header>
         {messages.map((message) => {

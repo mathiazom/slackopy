@@ -1,0 +1,156 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import Avatar from "../../../components/Avatar.astro";
+
+type ProfileResponse = {
+	id: string;
+	profileId: number;
+	displayName: string;
+	realName: string;
+	name: string | null;
+	title: string | null;
+	pronouns: string | null;
+	email: string | null;
+	phone: string | null;
+	isPrimaryOwner: boolean;
+	isOwner: boolean;
+	isAdmin: boolean;
+	isRestricted: boolean;
+	isUltraRestricted: boolean;
+	isBot: boolean;
+	isDeleted: boolean;
+	avatarUrl: string | null;
+	since: string;
+	until: string | null;
+};
+
+export async function getStaticPaths() {
+	const response = await fetch(`${process.env.BACKEND_URL}/user-profiles`);
+	if (!response.ok) {
+		throw new Error(`Fetching user profiles failed: ${response.status}`);
+	}
+	const data = await response.json() as {profiles: ProfileResponse[]};
+	return data.profiles.map((profile) => ({
+		params: {id: profile.id, profileId: String(profile.profileId)},
+		props: {profile},
+	}));
+}
+
+const {profile: user} = Astro.props as {profile: ProfileResponse};
+
+// Only the highest role, as Slack shows it.
+const role = user.isPrimaryOwner ? "Primæreier"
+	: user.isOwner ? "Eier"
+	: user.isAdmin ? "Administrator"
+	: user.isUltraRestricted ? "Enkeltkanalgjest"
+	: user.isRestricted ? "Gjest"
+	: null;
+const badges = [role, user.isBot && "Bot", user.isDeleted && "Deaktivert"].filter(Boolean);
+
+function renderDate(timestamp: string) {
+	return new Date(timestamp).toLocaleDateString(new Intl.Locale('no'));
+}
+
+const details = [
+	{label: "Brukernavn", value: user.name && `@${user.name}`},
+	{label: "Pronomen", value: user.pronouns},
+	{label: "E-post", value: user.email, href: user.email && `mailto:${user.email}`},
+	{label: "Telefon", value: user.phone, href: user.phone && `tel:${user.phone.replace(/[^+\d]/g, "")}`},
+	{label: "Slack-ID", value: user.id},
+].filter((detail) => detail.value);
+---
+<Layout>
+	<style>
+		.profile {
+			--avatar-size: 192px;
+			max-width: 40rem;
+			overflow-wrap: anywhere;
+		}
+
+		.header {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: flex-end;
+			gap: 1rem;
+			margin-block: 1rem;
+		}
+
+		.name {
+			margin: 0;
+		}
+
+		.header p {
+			margin: 0.25rem 0 0;
+		}
+
+		.secondary {
+			color: var(--color-secondary);
+		}
+
+		.badges {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.25rem;
+			margin: 0.5rem 0 0;
+			padding: 0;
+			list-style-type: none;
+		}
+
+		.badge {
+			border: 1px solid black;
+			border-radius: 1rem;
+			padding: 0.125rem 0.5rem;
+			font-size: 0.875em;
+		}
+
+		.details {
+			display: grid;
+			grid-template-columns: max-content 1fr;
+			gap: 0.5rem 1rem;
+			margin: 0;
+		}
+
+		.details dt {
+			color: var(--color-secondary);
+		}
+
+		.details dd {
+			margin: 0;
+		}
+
+		.since {
+			margin-block-start: 1.5rem;
+			font-size: 0.875em;
+			color: var(--color-secondary);
+		}
+	</style>
+
+	<main class="profile">
+		<div class="header">
+			<Avatar url={user.avatarUrl} colorKey={user.id} name={user.displayName} size={192} href={user.avatarUrl ?? undefined}/>
+			<div>
+				<h1 class="name">{user.displayName}</h1>
+				{user.realName !== user.displayName && <p class="secondary">{user.realName}</p>}
+				{user.title && <p>{user.title}</p>}
+				{badges.length > 0 && (
+					<ul class="badges">
+						{badges.map((badge) => <li class="badge">{badge}</li>)}
+					</ul>
+				)}
+			</div>
+		</div>
+		<dl class="details">
+			{details.map((detail) => (
+				<>
+					<dt>{detail.label}</dt>
+					<dd>{detail.href ? <a href={detail.href}>{detail.value}</a> : detail.value}</dd>
+				</>
+			))}
+		</dl>
+		<p class="since">
+			{user.until
+				? `Profilen så slik ut fra ${renderDate(user.since)} til ${renderDate(user.until)}.`
+				: `Profilen har sett slik ut siden ${renderDate(user.since)}.`}
+		</p>
+	</main>
+</Layout>

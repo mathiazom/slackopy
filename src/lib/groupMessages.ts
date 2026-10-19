@@ -1,12 +1,12 @@
 // Slack-style grouping of consecutive messages under one author header. Messages
 // must be in chronological order. A new group starts when the author changes, when
-// their identity (user snapshot) changed between messages, after a gap of more than
+// their identity (profile) changed between messages, after a gap of more than
 // five minutes, or at a day boundary. Messages without an author (bots) never group,
 // since there's no identity to tell them apart by.
 
 type Groupable = {
     authorId: string | null;
-    authorSnapshotId: number | null;
+    authorProfileId: number | null;
     timestamp: string;
 };
 
@@ -31,7 +31,7 @@ function continuesGroup(previous: Groupable, next: Groupable) {
     const nextTime = new Date(next.timestamp);
     return next.authorId !== null
         && next.authorId === previous.authorId
-        && next.authorSnapshotId === previous.authorSnapshotId
+        && next.authorProfileId === previous.authorProfileId
         && nextTime.getTime() - previousTime.getTime() <= MAX_GAP_MS
         // Same locale/time zone as the rendered timestamps, so the boundary
         // matches the dates people actually see.

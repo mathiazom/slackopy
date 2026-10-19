@@ -1,0 +1,29 @@
+/* Native popovers next to whatever opened them: reactions, and profiles. A
+   popover tied to one button names it with position-anchor; a shared one (a
+   profile, opened by every avatar, name and mention showing it) is anchored to
+   the button that opened it. */
+.popover {
+    border: 1px solid black;
+    padding: 0.5rem 1rem;
+}
+
+@supports (anchor-name: --a) {
+    .popover {
+        inset: auto;
+        margin: 0.25rem 0;
+        position-area: block-end span-inline-end;
+        position-try-fallbacks: flip-block, flip-inline;
+    }
+}
+
+/* Without anchor positioning a popover would open centered in the viewport,
+   detached from its button - a bottom sheet reads as intentional instead. */
+@supports not (anchor-name: --a) {
+    .popover {
+        inset: auto 0 0 0;
+        margin: 0;
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+    }
+}

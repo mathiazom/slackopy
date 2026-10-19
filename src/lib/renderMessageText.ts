@@ -4,6 +4,7 @@
 // (e.g. "a -&gt; b") would double-escape into the visibly-broken "-&amp;gt;".
 import {emoji as emojiMap, emojify} from "slackmoji";
 import {channelHref} from "./channelUrl";
+import {profilePopoverId} from "./userProfile";
 
 function decodeSlackEntities(text: string): string {
 	const entities: Record<string, string> = { amp: "&", lt: "<", gt: ">" };
@@ -96,9 +97,11 @@ function renderLines(text: string): string {
 // A trailing skin tone (":+1::skin-tone-3:") is part of the same token, so the
 // modifier isn't split from its base emoji into a separate element.
 // User/channel mentions arrive with their name already filled in by slackback
-// (only archived channels keep the <#...> form, so every one can be linked).
+// (only archived channels keep the <#...> form, so every one can be linked). A
+// user mention also carries the profile slackback resolved it to, as
+// <@id:profileId|name>, which opens that profile's popover.
 // @here/@channel/@everyone may carry a redundant |label, which is ignored.
-const TOKEN_PATTERN = /<emoji:([^|>]+)\|([^>]+)>|<@[UW][A-Z0-9]+\|([^>]*)>|<#([CG][A-Z0-9]+)\|([^>]*)>|<!(here|channel|everyone)(?:\|[^>]*)?>|<(https?:\/\/[^|>]+)(?:\|([^>]*))?>|(?<![\w*])\*([^*\n]+)\*(?![\w*])|(?<![\w_])_([^_\n]+)_(?![\w_])|(?<![\w~])~([^~\n]+)~(?![\w~])|```([^`]+)```|(?<![\w`])`([^`\n]+)`(?![\w`])|:([a-z0-9_+-]+(?:::skin-tone-[2-6])?):/g;
+const TOKEN_PATTERN = /<emoji:([^|>]+)\|([^>]+)>|<@[UW][A-Z0-9]+(?::(\d+))?\|([^>]*)>|<#([CG][A-Z0-9]+)\|([^>]*)>|<!(here|channel|everyone)(?:\|[^>]*)?>|<(https?:\/\/[^|>]+)(?:\|([^>]*))?>|(?<![\w*])\*([^*\n]+)\*(?![\w*])|(?<![\w_])_([^_\n]+)_(?![\w_])|(?<![\w~])~([^~\n]+)~(?![\w~])|```([^`]+)```|(?<![\w`])`([^`\n]+)`(?![\w`])|:([a-z0-9_+-]+(?:::skin-tone-[2-6])?):/g;
 
 // A code block is already a block of its own, so the single newline that puts it
 // on its own line in Slack would otherwise show up as an extra blank line on
@@ -121,13 +124,15 @@ function renderInline(text: string): string {
 	let afterCodeBlock = false;
 
 	for (const match of text.matchAll(TOKEN_PATTERN)) {
-		const [, emojiUrl, emojiName, userName, channelId, channelName, specialMention, linkUrl, linkLabel, bold, italic, strike, codeBlock, code, shortcode] = match;
+		const [, emojiUrl, emojiName, userProfileId, userName, channelId, channelName, specialMention, linkUrl, linkLabel, bold, italic, strike, codeBlock, code, shortcode] = match;
 		html += renderLines(trimCodeBlockNewlines(text.slice(lastIndex, match.index), afterCodeBlock, codeBlock !== undefined));
 		afterCodeBlock = codeBlock !== undefined;
 		if (emojiUrl !== undefined) {
 			html += `<img src="${escapeHtml(emojiUrl)}" alt="${escapeHtml(`:${emojiName}:`)}" title="${escapeHtml(`:${emojiName}:`)}" width="20" height="20" />`;
 		} else if (userName !== undefined) {
-			html += `<span class="mention">@${renderPlain(userName)}</span>`;
+			html += userProfileId !== undefined
+				? `<button type="button" class="mention" popovertarget="${profilePopoverId(Number(userProfileId))}">@${renderPlain(userName)}</button>`
+				: `<span class="mention">@${renderPlain(userName)}</span>`;
 		} else if (channelId !== undefined) {
 			html += `<a class="mention" href="${escapeHtml(channelHref(channelId))}">#${renderPlain(channelName)}</a>`;
 		} else if (specialMention !== undefined) {
