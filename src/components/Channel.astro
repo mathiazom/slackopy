@@ -4,6 +4,7 @@ import {groupMessages} from "../lib/groupMessages";
 import {latestAnchorId} from "../lib/channelUrl";
 import MessageGroup, {type MessageResponse} from "./MessageGroup.astro";
 import ProfilePopover, {type UserResponse} from "./ProfilePopover.astro";
+import ChannelInfo, {type ChannelResponse as ChannelInfoResponse} from "./ChannelInfo.astro";
 
 const {channelId} = Astro.props;
 
@@ -12,7 +13,7 @@ const backendUrl = process.env.BACKEND_URL;
 const response = await fetch(`${backendUrl}/channels/${channelId}`);
 
 type ChannelResponse = {
-    channel: { id: string; name: string; topic: string | null };
+    channel: ChannelInfoResponse;
     messages: MessageResponse[];
     // By profile id: everyone shown with a profile on the page.
     users: Record<string, UserResponse>;
@@ -58,7 +59,16 @@ const data = await response.json() as ChannelResponse;
         border-bottom: 3px solid black;
     }
 
+    /* The info button sits at the far right, so the name sizes to what's left. */
+    .title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
     .channelName {
+        flex: 1;
+        min-width: 0;
         container-type: inline-size;
     }
 
@@ -71,7 +81,7 @@ const data = await response.json() as ChannelResponse;
 
     /* Without a topic below it, the name's bottom margin would stack on the
        banner's own padding. */
-    .channelName:last-child h1 {
+    .title:last-child h1 {
         margin-block-end: 0;
     }
 
@@ -122,8 +132,11 @@ const data = await response.json() as ChannelResponse;
 
 <header class="banner">
     <a href="/">&larr; kanaler</a>
-    <div class="channelName">
-        <h1 style={`--chars: ${data.channel.name.length + 1}`}>#{data.channel.name}</h1>
+    <div class="title">
+        <div class="channelName">
+            <h1 style={`--chars: ${data.channel.name.length + 1}`}>#{data.channel.name}</h1>
+        </div>
+        <ChannelInfo channel={data.channel} users={data.users}/>
     </div>
     {data.channel.topic && <div class="topic" set:html={renderMessageText(data.channel.topic)}/>}
 </header>

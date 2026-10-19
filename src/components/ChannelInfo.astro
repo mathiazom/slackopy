@@ -1,0 +1,136 @@
+---
+import {renderMessageText} from "../lib/renderMessageText";
+import {profilePopoverId} from "../lib/userProfile";
+import type {UserResponse} from "./ProfilePopover.astro";
+import "../styles/popover.css";
+
+export type ChannelResponse = {
+    id: string;
+    name: string;
+    topic: string | null;
+    // The channel's description.
+    purpose: string | null;
+    previousNames: string[];
+    created: string;
+    // Key into the channel's users, null when we have no profile.
+    creatorProfileId: number | null;
+    isArchived: boolean;
+    // Null when it's not known when (Slack only records it as a message).
+    archived: string | null;
+    archiverProfileId: number | null;
+};
+
+type Props = {
+    channel: ChannelResponse;
+    users: Record<string, UserResponse>;
+};
+
+const {channel, users} = Astro.props;
+
+const id = "channel-info";
+
+function renderDate(timestamp: string) {
+    return new Date(timestamp).toLocaleDateString(new Intl.Locale('no'));
+}
+
+function user(profileId: number | null) {
+    return profileId !== null ? users[profileId] : undefined;
+}
+
+const creator = user(channel.creatorProfileId);
+const archiver = user(channel.archiverProfileId);
+const hasDetails = channel.purpose || channel.topic || channel.previousNames.length > 0;
+---
+
+<style>
+    .info-button {
+        flex: none;
+        padding: 0.25rem 0.5rem;
+        border: 1px solid black;
+        background: white;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .info-button:hover {
+        background: #eee;
+    }
+
+    @supports (anchor-name: --a) {
+        .channel-info {
+            max-width: min(24rem, calc(100vw - 2rem));
+        }
+    }
+
+    .channel-info__name {
+        margin: 0 0 0.5rem;
+        font-size: inherit;
+        overflow-wrap: anywhere;
+    }
+
+    .channel-info__event {
+        margin: 0 0 0.25rem;
+    }
+
+    .channel-info dl {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin: 0.75rem 0 0;
+        overflow-wrap: anywhere;
+    }
+
+    .channel-info dt {
+        color: var(--color-secondary);
+    }
+
+    .channel-info dd {
+        margin: 0;
+    }
+
+    .user {
+        padding: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        color: inherit;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+</style>
+
+<button type="button" class="info-button" popovertarget={id} style={`anchor-name: --${id}`}>om kanalen</button>
+{/* Out of the search index, like other popovers: their text is hidden. */}
+<div class="popover channel-info" id={id} popover style={`position-anchor: --${id}`} data-pagefind-ignore>
+    <p class="channel-info__name"><b>#{channel.name}</b></p>
+    <p class="channel-info__event">
+        opprettet {renderDate(channel.created)}
+        {creator && <>av <button type="button" class="user" popovertarget={profilePopoverId(creator.profileId)}>{creator.displayName}</button></>}
+    </p>
+    {channel.isArchived && (
+        <p class="channel-info__event">
+            {channel.archived ? `arkivert ${renderDate(channel.archived)}` : "arkivert"}
+            {archiver && <>av <button type="button" class="user" popovertarget={profilePopoverId(archiver.profileId)}>{archiver.displayName}</button></>}
+        </p>
+    )}
+    {hasDetails && <dl>
+        {channel.purpose && (
+            <div>
+                <dt>beskrivelse</dt>
+                <dd set:html={renderMessageText(channel.purpose)}/>
+            </div>
+        )}
+        {channel.topic && (
+            <div>
+                <dt>emne</dt>
+                <dd set:html={renderMessageText(channel.topic)}/>
+            </div>
+        )}
+        {channel.previousNames.length > 0 && (
+            <div>
+                <dt>tidligere navn</dt>
+                <dd>{channel.previousNames.map((name) => `#${name}`).join(", ")}</dd>
+            </div>
+        )}
+    </dl>}
+</div>
