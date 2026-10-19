@@ -61,18 +61,48 @@ function renderTimestamp(timestamp: string) {
     return new Date(timestamp).toLocaleString(new Intl.Locale('no'))
 }
 
-// Matches the .media max size. Rendering images and videos at their final size
-// up front means the page has its full height before any of them load, so
-// opening at #latest isn't thrown off by media arriving afterwards. It's also
-// what makes lazy-loading images safe.
+// Matches the .video max size and caps the image row. Rendering images and
+// videos at their final size up front means the page has its full height before
+// any of them load, so opening at #latest isn't thrown off by media arriving
+// afterwards. It's also what makes lazy-loading images safe.
 const MAX_MEDIA_WIDTH = 480;
 const MAX_MEDIA_HEIGHT = 360;
+// Below this the image row scrolls instead of shrinking.
+const MIN_IMAGE_ROW_HEIGHT = 140;
 
 function mediaSize(embed: EmbedResponse) {
     if (!embed.width || !embed.height) return {};
     const scale = Math.min(1, MAX_MEDIA_WIDTH / embed.width, MAX_MEDIA_HEIGHT / embed.height);
     return {width: Math.round(embed.width * scale), height: Math.round(embed.height * scale)};
 }
+
+// A message's images share one height. Each grows by its aspect ratio, so the
+// height is the row's width over the ratio sum, and bounding the width (see
+// .image-row__track) bounds the height. Without known dimensions an image gets
+// a square slot and is letterboxed in it.
+function imageRow(files: FileResponse[]) {
+    const images = files.flatMap(({url, name, embed}) => {
+        if (embed?.kind !== "image") return [];
+        const ratio = embed.width && embed.height ? embed.width / embed.height : null;
+        return [{url, name, src: embed.url, height: embed.height, ratio: ratio ?? 1, letterboxed: ratio === null}];
+    });
+    if (images.length === 0) return null;
+
+    const ratioSum = images.reduce((sum, image) => sum + image.ratio, 0);
+    // Not scaled up past the smallest image, and a lone one keeps the width cap.
+    let maxHeight = Math.min(MAX_MEDIA_HEIGHT, ...images.map((image) => image.height ?? Infinity));
+    if (images.length === 1) maxHeight = Math.min(maxHeight, MAX_MEDIA_WIDTH / ratioSum);
+    return {
+        images,
+        style: {
+            "--ratio-sum": ratioSum,
+            "--gaps": images.length - 1,
+            "--max-height": `${maxHeight}px`,
+            "--min-height": `${Math.min(MIN_IMAGE_ROW_HEIGHT, maxHeight)}px`,
+        },
+    };
+}
+
 // With a poster nothing of the video needs loading before it plays; without one,
 // its metadata gives the browser a first frame to show (where it can decode it).
 function videoPreview(embed: EmbedResponse) {
@@ -123,30 +153,121 @@ function videoPreview(embed: EmbedResponse) {
         margin-block: 0.25em 0.5em;
     }
 
+    .files-count {
+        margin-block: 0.5rem;
+        font-size: 0.875em;
+        color: var(--color-secondary);
+    }
+
+    .files-count + .files {
+        margin-block-start: 0;
+    }
+
     .files {
         margin-block: 0.5rem 1rem;
         display: flex;
         flex-wrap: wrap;
-        /* Images of different heights would otherwise stretch to the row. */
+        /* Players of different heights would otherwise stretch to the row. */
         align-items: flex-start;
         gap: 1rem;
     }
 
+    /* Holds the edge fades, which would scroll along inside the scroller. */
+    .image-row {
+        position: relative;
+        width: 100%;
+    }
+
+    .image-row__scroller {
+        overflow-x: auto;
+        /* So a swipe at the end isn't taken as back navigation. */
+        overscroll-behavior-x: contain;
+    }
+
+    /* Edges darken where there's more to scroll. A row that fits has an
+       inactive timeline, so they stay hidden. Firefox lacks scroll-driven
+       animations so far, and gets no fades. */
+    @supports (animation-timeline: scroll()) {
+        .image-row {
+            --fade: 3rem;
+            /* The fades are outside the scroller defining the timeline. */
+            timeline-scope: --image-row;
+        }
+
+        .image-row__scroller {
+            scroll-timeline: --image-row inline;
+        }
+
+        .image-row::before,
+        .image-row::after {
+            content: "";
+            position: absolute;
+            inset-block: 0;
+            width: var(--fade);
+            pointer-events: none;
+            opacity: 0;
+            animation: image-row-fade linear both;
+            animation-timeline: --image-row;
+        }
+
+        .image-row::before {
+            left: 0;
+            background: linear-gradient(to right, rgb(0 0 0 / 0.6), transparent);
+            animation-range: 0 var(--fade);
+        }
+
+        .image-row::after {
+            right: 0;
+            background: linear-gradient(to left, rgb(0 0 0 / 0.6), transparent);
+            animation-range: calc(100% - var(--fade)) 100%;
+            animation-direction: reverse;
+        }
+    }
+
+    @keyframes image-row-fade {
+        to { opacity: 1; }
+    }
+
+    .image-row__track {
+        --gap: 0.5rem;
+        display: flex;
+        align-items: flex-start;
+        gap: var(--gap);
+        min-width: calc(var(--ratio-sum) * var(--min-height) + var(--gaps) * var(--gap));
+        max-width: calc(var(--ratio-sum) * var(--max-height) + var(--gaps) * var(--gap));
+    }
+
     /* Opens the original, which for a converted image (e.g. HEIC) is the file
-       as uploaded rather than the copy shown. */
+       as uploaded rather than the copy shown. Sized by its inline flex-grow
+       and aspect-ratio. */
     .image-link {
-        display: block;
-        max-width: 100%;
+        flex: 0 1 0;
+        min-width: 0;
         line-height: 0;
     }
 
-    /* Capped in both directions, keeping the aspect ratio, so a tall
-       screenshot or portrait video doesn't take over the channel (Slack caps
-       around the same). Media with known dimensions already get their capped
-       size as width/height attributes (see mediaSize); height: auto keeps the
-       ratio when 100% is narrower. Media without get capped from their
-       natural size. */
-    .media {
+    /* The border goes inside, keeping heights shared, which puts the box a
+       pixel off the image's ratio (as can Slack's thumbnail rounding): cover
+       crops that rather than letterboxing it. */
+    .image {
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border: 1px solid black;
+    }
+
+    .image--letterboxed {
+        object-fit: contain;
+    }
+
+    /* Capped in both directions, keeping the aspect ratio, so a tall portrait
+       video doesn't take over the channel (Slack caps around the same).
+       Videos with known dimensions already get their capped size as
+       width/height attributes (see mediaSize); height: auto keeps the ratio
+       when 100% is narrower. Videos without get capped from their natural
+       size. */
+    .video {
         max-width: min(100%, 480px);
         max-height: 360px;
         height: auto;
@@ -201,58 +322,73 @@ function videoPreview(embed: EmbedResponse) {
             <b title={author.authorRealName}>{author.authorDisplayName}</b>
             <time class="timestamp" datetime={author.timestamp}>{renderTimestamp(author.timestamp)}</time>
         </Header>
-        {messages.map((message) => (
-            <div class="message">
-                {message.text && <div class="text" set:html={renderMessageText(message.text)}/>}
-                {message.files.length > 0 && (
-                    <div class="files">
-                        {message.files.map((file) => {
-                            const link = (
-                                <a href={file.url} target="_blank" rel="noopener noreferrer">
-                                    {file.name ?? file.id}
-                                </a>
-                            );
-                            switch (file.embed?.kind) {
-                                case "image":
-                                    return (
-                                        <a href={file.url} target="_blank" rel="noopener noreferrer" class="image-link">
-                                            <img src={file.embed.url} alt={file.name ?? ""} class="media" loading="lazy" decoding="async" {...mediaSize(file.embed)}/>
-                                        </a>
-                                    );
-                                case "video":
-                                    return (
-                                        <div class="player">
-                                            <video src={file.embed.url} controls class="media" {...videoPreview(file.embed)} {...mediaSize(file.embed)}/>
-                                            {link}
+        {messages.map((message) => {
+            const row = imageRow(message.files);
+            return (
+                <div class="message">
+                    {message.text && <div class="text" set:html={renderMessageText(message.text)}/>}
+                    {message.files.length > 1 && (
+                        <div class="files-count">{message.files.length} vedlegg</div>
+                    )}
+                    {message.files.length > 0 && (
+                        <div class="files">
+                            {row && (
+                                <div class="image-row">
+                                    <div class="image-row__scroller">
+                                        <div class="image-row__track" style={row.style}>
+                                            {row.images.map((image) => (
+                                                <a href={image.url} target="_blank" rel="noopener noreferrer" class="image-link"
+                                                   style={{"flex-grow": image.ratio, "aspect-ratio": image.ratio}}>
+                                                    <img src={image.src} alt={image.name ?? ""} class:list={["image", {"image--letterboxed": image.letterboxed}]}
+                                                         loading="lazy" decoding="async"/>
+                                                </a>
+                                            ))}
                                         </div>
-                                    );
-                                case "audio":
-                                    return (
-                                        <div class="player">
-                                            <audio src={file.embed.url} controls preload="metadata" class="audio"/>
-                                            {link}
-                                        </div>
-                                    );
-                                default:
-                                    return link;
-                            }
-                        })}
-                    </div>
-                )}
-                <Reactions messageId={message.id} reactions={message.reactions}/>
-                {message.replies.length > 0 && (
-                    <details>
-                        <summary class="thread__header">
-                            {message.replies.length} svar
-                        </summary>
-                        <div class="thread">
-                            {groupMessages(message.replies).map((group) => (
-                                <Astro.self messages={group} inThread/>
-                            ))}
+                                    </div>
+                                </div>
+                            )}
+                            {message.files.filter((file) => file.embed?.kind !== "image").map((file) => {
+                                const link = (
+                                    <a href={file.url} target="_blank" rel="noopener noreferrer">
+                                        {file.name ?? file.id}
+                                    </a>
+                                );
+                                switch (file.embed?.kind) {
+                                    case "video":
+                                        return (
+                                            <div class="player">
+                                                <video src={file.embed.url} controls class="video" {...videoPreview(file.embed)} {...mediaSize(file.embed)}/>
+                                                {link}
+                                            </div>
+                                        );
+                                    case "audio":
+                                        return (
+                                            <div class="player">
+                                                <audio src={file.embed.url} controls preload="metadata" class="audio"/>
+                                                {link}
+                                            </div>
+                                        );
+                                    default:
+                                        return link;
+                                }
+                            })}
                         </div>
-                    </details>
-                )}
-            </div>
-        ))}
+                    )}
+                    <Reactions messageId={message.id} reactions={message.reactions}/>
+                    {message.replies.length > 0 && (
+                        <details>
+                            <summary class="thread__header">
+                                {message.replies.length} svar
+                            </summary>
+                            <div class="thread">
+                                {groupMessages(message.replies).map((group) => (
+                                    <Astro.self messages={group} inThread/>
+                                ))}
+                            </div>
+                        </details>
+                    )}
+                </div>
+            );
+        })}
     </div>
 </div>
