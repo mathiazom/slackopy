@@ -9,6 +9,23 @@ if (!response.ok) {
 }
 const data = await response.json();
 const channels = data.channels as {id: string, name: string}[];
+
+const statsResponse = await fetch(`${backendUrl}/stats`);
+if (!statsResponse.ok) {
+	throw new Error(`Fetching stats failed: ${statsResponse.status}`);
+}
+const stats = await statsResponse.json() as {
+	messageCount: number,
+	firstMessage: string | null,
+	lastMessage: string | null,
+};
+
+// Set by the image build, absent in dev.
+const commit = process.env.GIT_COMMIT;
+
+function renderDate(timestamp: string) {
+	return new Date(timestamp).toLocaleDateString(new Intl.Locale('no'), {dateStyle: "medium"});
+}
 ---
 <style>
 	/* Search runs in the browser, so without JS the box would lead nowhere. */
@@ -29,3 +46,12 @@ const channels = data.channels as {id: string, name: string}[];
 		<li><a href={channelHref(channel.id)}>#{channel.name}</a></li>
 	))}
 </ul>
+<footer style="padding: 1rem; color: var(--color-secondary); font-size: 0.875rem;">
+	<p style="margin: 0;">
+		{stats.messageCount.toLocaleString(new Intl.Locale('no'))} meldinger i {channels.length} kanaler{stats.firstMessage && stats.lastMessage && `, fra ${renderDate(stats.firstMessage)} til ${renderDate(stats.lastMessage)}`}
+	</p>
+	<p style="margin: 0;">
+		Sist bygget {new Date().toLocaleString(new Intl.Locale('no'), {dateStyle: "medium", timeStyle: "short"})}
+		{commit && <> · slackopy <a href={`https://github.com/mathiazom/slackopy/commit/${commit}`} style="color: inherit;">{commit.slice(0, 7)}</a></>}
+	</p>
+</footer>
