@@ -1,6 +1,7 @@
 ---
 import Layout from "../../../layouts/Layout.astro";
 import Avatar from "../../../components/Avatar.astro";
+import {profileHref} from "../../../lib/userProfile";
 
 type ProfileResponse = {
 	id: string;
@@ -19,7 +20,9 @@ type ProfileResponse = {
 	isUltraRestricted: boolean;
 	isBot: boolean;
 	isDeleted: boolean;
+	// 72px and 512px.
 	avatarUrl: string | null;
+	avatarLargeUrl: string | null;
 	since: string;
 	until: string | null;
 };
@@ -30,13 +33,16 @@ export async function getStaticPaths() {
 		throw new Error(`Fetching user profiles failed: ${response.status}`);
 	}
 	const data = await response.json() as {profiles: ProfileResponse[]};
+	// Each page lists all of the user's profiles, newest first. slackback sends
+	// them oldest first.
+	const historyByUser = Map.groupBy(data.profiles.toReversed(), (profile) => profile.id);
 	return data.profiles.map((profile) => ({
 		params: {id: profile.id, profileId: String(profile.profileId)},
-		props: {profile},
+		props: {profile, history: historyByUser.get(profile.id)!},
 	}));
 }
 
-const {profile: user} = Astro.props as {profile: ProfileResponse};
+const {profile: user, history} = Astro.props as {profile: ProfileResponse; history: ProfileResponse[]};
 
 // Only the highest role, as Slack shows it.
 const role = user.isPrimaryOwner ? "Primæreier"
@@ -123,11 +129,33 @@ const details = [
 			font-size: 0.875em;
 			color: var(--color-secondary);
 		}
+
+		.history h2 {
+			font-size: 1em;
+			margin-block: 1.5rem 0.5rem;
+		}
+
+		.history ul {
+			display: flex;
+			flex-direction: column;
+			gap: 0.5rem;
+			margin: 0;
+			padding: 0;
+			list-style-type: none;
+		}
+
+		/* Each profile's own avatar in place of a bullet. */
+		.history li {
+			--avatar-size: 24px;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
 	</style>
 
 	<main class="profile">
 		<div class="header">
-			<Avatar url={user.avatarUrl} colorKey={user.id} name={user.displayName} size={192} href={user.avatarUrl ?? undefined}/>
+			<Avatar url={user.avatarLargeUrl} colorKey={user.id} name={user.displayName} size={192} href={user.avatarLargeUrl ?? undefined}/>
 			<div>
 				<h1 class="name">{user.displayName}</h1>
 				{user.realName !== user.displayName && <p class="secondary">{user.realName}</p>}
@@ -152,5 +180,25 @@ const details = [
 				? `Profilen så slik ut fra ${renderDate(user.since)} til ${renderDate(user.until)}.`
 				: `Profilen har sett slik ut siden ${renderDate(user.since)}.`}
 		</p>
+		{history.length > 1 && (
+			<nav class="history" aria-labelledby="history">
+				<h2 id="history">Profilhistorikk</h2>
+				<ul>
+					{history.map((profile) => {
+						const period = profile.until
+							? `${renderDate(profile.since)} – ${renderDate(profile.until)}`
+							: `${renderDate(profile.since)} –`;
+						return (
+							<li>
+								<Avatar url={profile.avatarUrl} colorKey={profile.id} name={profile.displayName} size={24}/>
+								{profile.profileId === user.profileId
+									? <span aria-current="page">{period} (denne)</span>
+									: <a href={profileHref(profile.id, profile.profileId)}>{period}</a>}
+							</li>
+						);
+					})}
+				</ul>
+			</nav>
+		)}
 	</main>
 </Layout>
