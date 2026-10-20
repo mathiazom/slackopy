@@ -53,4 +53,5 @@ function renderDate(timestamp: string) {
 		oppdatert <span style="white-space: nowrap;">{new Date().toLocaleString(new Intl.Locale('no'), {dateStyle: "medium", timeStyle: "short"})}</span>
 	</p>
 		{commit && <p style="margin: 0;">slackopy <a href={`https://github.com/mathiazom/slackopy/commit/${commit}`} style="color: inherit;">{commit.slice(0, 7)}</a></p>}
+	<p style="margin: 0;"><a href="/heat/" style="color: inherit;">varmekart</a></p>
 </footer>
