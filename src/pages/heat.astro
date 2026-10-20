@@ -91,6 +91,15 @@ for (let start = monday(today); start >= monday(first); start = new Date(start.g
 			cursor: pointer;
 		}
 
+		/* Above the tile, where a tapping finger doesn't cover it; below only when
+		   there's no room. */
+		@supports (anchor-name: --a) {
+			.day-popover {
+				position-area: block-start;
+				position-try-fallbacks: flip-block;
+			}
+		}
+
 		.day-popover ul {
 			margin: 0;
 			padding: 0;
