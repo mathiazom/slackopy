@@ -2,3 +2,12 @@
 node_modules
 dist
 public/pagefind
+.astro
+.env
+.env.*
+.git
+.github
+.idea
+.dockerignore
+Dockerfile
+README.md
