@@ -1,6 +1,9 @@
 # build output
 dist/
 
+# builder.mjs's staging build
+.builder/
+
 # search index from the last build, copied so search works in dev
 public/pagefind/
 

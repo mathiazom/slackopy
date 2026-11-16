@@ -106,12 +106,12 @@ const hasDetails = channel.purpose || channel.topic || channel.previousNames.len
     <p class="channel-info__name"><b>#{channel.name}</b></p>
     <p class="channel-info__event">
         opprettet {renderDate(channel.created)}
-        {creator && <>av <button type="button" class="user" popovertarget={profilePopoverId(creator.profileId)}>{creator.displayName}</button></>}
+        {creator && <>{" "}av <button type="button" class="user" popovertarget={profilePopoverId(creator.profileId)}>{creator.displayName}</button></>}
     </p>
     {channel.isArchived && (
         <p class="channel-info__event">
             {channel.archived ? `arkivert ${renderDate(channel.archived)}` : "arkivert"}
-            {archiver && <>av <button type="button" class="user" popovertarget={profilePopoverId(archiver.profileId)}>{archiver.displayName}</button></>}
+            {archiver && <>{" "}av <button type="button" class="user" popovertarget={profilePopoverId(archiver.profileId)}>{archiver.displayName}</button></>}
         </p>
     )}
     {hasDetails && <dl>

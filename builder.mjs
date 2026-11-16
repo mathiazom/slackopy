@@ -2,11 +2,16 @@
 // The auth gate serves SITE_DIR/current, a symlink that is only switched to a finished build, 
 // so a failed or half-done build is never served. Failures retry until one succeeds.
 import {spawn} from "node:child_process";
-import {mkdir, readdir, rename, rm, symlink} from "node:fs/promises";
+import {cp, mkdir, readdir, rename, rm, symlink} from "node:fs/promises";
 import path from "node:path";
 
 const SITE_DIR = process.env.SITE_DIR ?? "/site";
 const BUILDS_DIR = path.join(SITE_DIR, "builds");
+// Astro moves its output into place with rename(), which fails across
+// filesystems (EXDEV), and SITE_DIR is usually a mounted volume. So the build
+// goes to the project's own filesystem first and is copied over afterwards.
+// Not dist, which is dev builds' output (served by the local gate).
+const STAGING_DIR = path.resolve(".builder");
 const REBUILD_HOUR_UTC = 5;
 const RETRY_MS = 5 * 60 * 1000;
 
@@ -21,8 +26,20 @@ function run(bin, args) {
 // The search index is part of the build, so it is switched in together with the
 // pages it indexes.
 async function buildSite(outDir) {
-    return await run("astro", ["build", "--outDir", outDir])
-        && await run("pagefind", ["--site", outDir]);
+    await rm(STAGING_DIR, {recursive: true, force: true});
+    try {
+        if (!(await run("astro", ["build", "--outDir", STAGING_DIR])
+            && await run("pagefind", ["--site", STAGING_DIR]))) {
+            return false;
+        }
+        await cp(STAGING_DIR, outDir, {recursive: true});
+        return true;
+    } catch (error) {
+        console.error(error);
+        return false;
+    } finally {
+        await rm(STAGING_DIR, {recursive: true, force: true});
+    }
 }
 
 async function build() {
