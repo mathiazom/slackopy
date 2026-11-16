@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "astro": "^5.10.1",
-    "pagefind": "^1.5.2",
+    "pagefind": "^1.6.0",
     "slackmoji": "^1.1.0"
   }
 }
